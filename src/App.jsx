@@ -13,16 +13,18 @@ import SalesIndex from "./pages/ai-sales-analyst";
 import PersonalAssistantIndex from "./pages/ai-personal-assistant";
 import LegacyFinancePage from "./pages/FinancePage";
 import LegacyInvoiceDetail from "./pages/InvoiceDetail";
+import LandingPage from "./pages/LandingPage";
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/logout" element={<LogoutPage />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Workspace />} />
+            <Route path="/workspace" element={<Workspace />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/ai/personal-assistant" element={<PersonalAssistantIndex />} />

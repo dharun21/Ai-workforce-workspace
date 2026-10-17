@@ -19,7 +19,7 @@ export default function HrIndex() {
       <div className="mx-auto max-w-[1100px] px-8 py-8 max-[760px]:px-4">
         <button
           className="mb-6 flex items-center gap-2 text-[10px] text-[#9995a8] hover:text-violet-200"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/workspace")}
           type="button"
         >
           ← Back to My AI team

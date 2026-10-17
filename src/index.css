@@ -86,3 +86,14 @@
 *::-webkit-scrollbar-corner {
   background: #111018;
 }
+
+/* Keep the landing page scrollable without showing the document scrollbar. */
+html:has(.landing-page),
+body:has(.landing-page) {
+  scrollbar-width: none;
+}
+
+html:has(.landing-page)::-webkit-scrollbar,
+body:has(.landing-page)::-webkit-scrollbar {
+  display: none;
+}

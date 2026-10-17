@@ -51,7 +51,7 @@ export default function LoginPage() {
     }, 5000);
     return () => window.clearInterval(timer);
   }, []);
-  if (user) return <Navigate to={location.state?.from?.pathname || "/"} replace />;
+  if (user) return <Navigate to={location.state?.from?.pathname || "/workspace"} replace />;
 
   function submit(event) {
     event.preventDefault();
@@ -59,7 +59,7 @@ export default function LoginPage() {
       setError("Those details don’t match an account. Check them and try again.");
       return;
     }
-    navigate(location.state?.from?.pathname || "/", { replace: true });
+    navigate(location.state?.from?.pathname || "/workspace", { replace: true });
   }
 
   return (
@@ -167,18 +167,18 @@ export default function LoginPage() {
         <div className="absolute h-[280px] w-[280px] rounded-full border border-violet-200/[0.14] animate-feature-ring-wave [animation-delay:1.8s]" />
         <div className="absolute h-[190px] w-[190px] rounded-full border border-violet-200/[0.16] animate-feature-ring-wave [animation-delay:3.6s]" />
         <div className="absolute grid h-24 w-24 place-items-center rounded-[28px] border border-violet-200/40 bg-gradient-to-br from-[#725a9b] to-[#302844] text-3xl text-violet-100 shadow-[0_0_90px_rgba(169,134,240,0.32)] transition-colors duration-700">
-          <SpecialistIcon type={activeHighlight.iconType} className="h-7 w-7 transition-transform duration-500" />
+          <SpecialistIcon type={activeHighlight.iconType} className="h-15 w-15 transition-transform duration-500" />
         </div>
         <div className="absolute left-[10%] top-[26%] rounded-xl border border-white/10 bg-[#191723]/90 px-4 py-3 text-[10px] text-violet-100 shadow-xl backdrop-blur">
           <span className="mr-2 text-violet-300">✦</span>{activeHighlight.eyebrow}{" "}
           <b className="ml-2 text-white">{activeHighlight.status}</b>
         </div>
         <div className="absolute right-[7%] top-[43%] rounded-xl border border-white/10 bg-[#191723]/90 px-4 py-3 text-[10px] text-violet-100 shadow-xl backdrop-blur">
-          <SpecialistIcon type="finance" className="mr-2 inline h-3 w-3 align-[-2px] text-violet-300" />FINANCE ANALYST
+          <SpecialistIcon type="finance" className="mr-2 inline h-4 w-4 align-[-4px] text-violet-300" />FINANCE ANALYST
           <b className="ml-2 text-white">Clearer finances</b>
         </div>
         <div className="absolute bottom-[29%] left-[10%] rounded-xl border border-white/10 bg-[#191723]/90 px-4 py-3 text-[10px] text-violet-100 shadow-xl backdrop-blur">
-          <SpecialistIcon type="assistant" className="mr-2 inline h-3 w-3 align-[-2px] text-amber-200" />PERSONAL ASSISTANT
+          <SpecialistIcon type="assistant" className="mr-2 inline h-4 w-4 align-[-4px] text-amber-200" />PERSONAL ASSISTANT
           <b className="ml-2 text-white">Here for your day</b>
         </div>
         <div className="absolute bottom-[12%] max-w-[360px] px-6 text-center">

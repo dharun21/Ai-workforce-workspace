@@ -43,7 +43,7 @@ export default function FinanceIndex() {
       <div className="mx-auto max-w-[1380px] px-8 py-7 max-[760px]:px-4">
         <button
           className="mb-5 flex items-center gap-2 text-[10px] text-[#9995a8] hover:text-violet-200"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/workspace")}
           type="button"
         >
           <FaArrowLeft />

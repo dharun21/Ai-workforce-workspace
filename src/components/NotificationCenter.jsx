@@ -19,7 +19,7 @@ const initialNotifications = [
     description: "Your employee workspace is ready for the day.",
     time: "Today",
     icon: <SpecialistIcon type="team" className="h-3.5 w-3.5" />,
-    href: "/",
+    href: "/workspace",
     unread: true,
   },
 ];

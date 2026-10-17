@@ -21,7 +21,7 @@ export function AppSidebar() {
       <div className="w-full">
         <NavLink
           className="mb-10 flex h-12 items-center justify-center px-2 pt-4 max-[760px]:px-0"
-          to="/"
+          to="/workspace"
           aria-label="ZengenAI home"
         >
           <span className="flex items-start gap-3 whitespace-nowrap max-[760px]:hidden">
@@ -40,7 +40,7 @@ export function AppSidebar() {
           WORKSPACE
         </p>
         <nav className="grid gap-1.5" aria-label="Main navigation">
-          <NavLink end className={linkClass} to="/">
+          <NavLink end className={linkClass} to="/workspace">
             <SpecialistIcon type="team" className="h-4 w-4 shrink-0" />
             <span className="max-[760px]:hidden">My AI team</span>
             <span className="ml-auto rounded-md bg-violet-300/10 px-1.5 py-0.5 text-[9px] font-bold text-violet-200 max-[760px]:hidden">
