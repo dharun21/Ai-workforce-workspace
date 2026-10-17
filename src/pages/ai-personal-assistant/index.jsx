@@ -14,11 +14,11 @@ import {
   FaRegLightbulb,
   FaRegStickyNote,
   FaRegSun,
-  FaRobot,
   FaSmile,
   FaTrashAlt,
 } from "react-icons/fa";
 import { AppLayout } from "../../components/AppLayout";
+import SpecialistIcon from "../../components/SpecialistIcon";
 import ReminderPopup from "./popups/ReminderPopup";
 import QuickCapturePopup from "./popups/QuickCapturePopup";
 import SuggestionPopup from "./popups/SuggestionPopup";
@@ -226,7 +226,7 @@ export default function PersonalAssistantIndex() {
             <div className="absolute left-1/2 top-1/2 h-[195px] w-[195px] -translate-x-1/2 -translate-y-1/2 animate-feature-ring-wave rounded-full border border-violet-200/15 motion-reduce:animate-none" />
             <div className="absolute left-1/2 top-1/2 h-[255px] w-[255px] -translate-x-1/2 -translate-y-1/2 animate-feature-ring-wave rounded-full border border-dashed border-violet-200/15 [animation-delay:900ms] motion-reduce:animate-none" />
             <div className="absolute left-1/2 top-1/2 grid h-[74px] w-[74px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[22px] border border-violet-200/40 bg-gradient-to-br from-[#614a8d] to-[#322b49] text-2xl text-violet-100 shadow-[0_0_50px_rgba(174,140,255,0.25)]">
-              <FaRobot />
+              <SpecialistIcon type="assistant" className="h-5 w-5" />
             </div>
             <span className="absolute left-0 top-7 rounded-lg border border-white/10 bg-[#191723]/90 px-3 py-2 text-[9px] text-violet-100">
               <FaRegSun className="mr-1.5 inline text-amber-200" />

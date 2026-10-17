@@ -1,6 +1,7 @@
 ﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaArrowRight, FaBell, FaCheck, FaFileInvoice, FaRobot } from "react-icons/fa";
+import { FaArrowRight, FaBell, FaCheck } from "react-icons/fa";
+import SpecialistIcon from "./SpecialistIcon";
 
 const initialNotifications = [
   {
@@ -8,7 +9,7 @@ const initialNotifications = [
     title: "Invoice review completed",
     description: "Your Finance Analyst has finished processing a new invoice.",
     time: "8 min ago",
-    icon: <FaFileInvoice />,
+    icon: <SpecialistIcon type="finance" className="h-3.5 w-3.5" />,
     href: "/ai/finance",
     unread: true,
   },
@@ -17,7 +18,7 @@ const initialNotifications = [
     title: "AI workforce is ready",
     description: "Your employee workspace is ready for the day.",
     time: "Today",
-    icon: <FaRobot />,
+    icon: <SpecialistIcon type="team" className="h-3.5 w-3.5" />,
     href: "/",
     unread: true,
   },

@@ -1,7 +1,8 @@
 ﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaArrowRight, FaRobot, FaUpload } from "react-icons/fa";
+import { FaArrowRight, FaUpload } from "react-icons/fa";
 import { AppLayout } from "../../components/AppLayout";
+import SpecialistIcon from "../../components/SpecialistIcon";
 import { DEMO_CREDENTIALS } from "../authentication/credentials";
 
 export default function SettingsPage() {
@@ -61,7 +62,7 @@ export default function SettingsPage() {
             <section className={panel} id="general">
               <div className="mb-5 flex items-center gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-300/10 text-violet-200">
-                  <FaRobot />
+                  <SpecialistIcon type="team" className="h-4 w-4" />
                 </span>
                 <div>
                   <h2 className="mb-1 font-display text-sm font-semibold">Workspace defaults</h2>

@@ -48,7 +48,7 @@ export default function EmployeeCard({ employee, index = 0, onOpen }) {
         <span>
           <strong className="font-display text-[15px] font-semibold">{employee.tasks}</strong>
           <small className="ml-1 text-[9px] text-[#9995a8]">
-            {purchased ? "workspace access" : included ? "ready to help" : "availability"}
+            {purchased ? "workspace access" : included ? "to help" : "availability"}
           </small>
         </span>
       </div>

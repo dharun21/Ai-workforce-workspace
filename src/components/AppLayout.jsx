@@ -1,20 +1,16 @@
 ﻿import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaCog,
-  FaFileInvoice,
-  FaRegLightbulb,
-  FaRobot,
   FaSignOutAlt,
   FaUserCircle,
 } from "react-icons/fa";
-import logo from "../assets/background/ZG-icon.png";
 import { useAuth } from "../pages/authentication/AuthContext";
 import NotificationCenter from "./NotificationCenter";
+import SpecialistIcon from "./SpecialistIcon";
 
 const baseLink =
   "group flex h-11 items-center gap-3 rounded-xl px-3 text-sm text-[#9995a8] transition hover:bg-white/[0.045] hover:text-white max-[760px]:w-11 max-[760px]:justify-center max-[760px]:px-0";
 const activeLink = "bg-violet-300/10 font-semibold text-violet-200 hover:bg-violet-300/15";
-
 export function AppSidebar() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -24,13 +20,20 @@ export function AppSidebar() {
     <aside className="z-20 flex h-screen w-[250px] shrink-0 flex-col border-r border-white/[0.07] bg-[#111018] px-4 py-6 max-[1050px]:w-[220px] max-[760px]:w-[66px] max-[760px]:items-center max-[760px]:px-2">
       <div className="w-full">
         <NavLink
-          className="mb-10 flex h-12 items-center gap-3 px-2 max-[760px]:justify-center max-[760px]:px-0"
+          className="mb-10 flex h-12 items-center justify-center px-2 pt-4 max-[760px]:px-0"
           to="/"
           aria-label="ZengenAI home"
         >
-          <img className="h-10 w-10 rounded-full object-cover" src={logo} alt="" />
-          <span className="font-display text-lg font-bold tracking-tight text-white max-[760px]:hidden">
-            ZengenAI
+          <span className="flex items-start gap-3 whitespace-nowrap max-[760px]:hidden">
+            <span
+              className="text-[44px] leading-none tracking-[0.06em] text-white"
+              style={{ fontFamily: "'Great Vibes', cursive" }}
+            >
+              Zengen
+            </span>
+            <span className="rounded-md border border-violet-300/25 bg-violet-300/[0.08] px-2 py-1.5 font-display text-[11px] font-bold tracking-[0.18em] text-violet-200 shadow-[0_0_16px_rgba(167,139,250,0.12)]">
+              AI
+            </span>
           </span>
         </NavLink>
         <p className="mb-3 px-3 text-[9px] font-bold tracking-[0.18em] text-[#706b80] max-[760px]:hidden">
@@ -38,21 +41,21 @@ export function AppSidebar() {
         </p>
         <nav className="grid gap-1.5" aria-label="Main navigation">
           <NavLink end className={linkClass} to="/">
-            <FaRobot className="shrink-0 text-base" />
+            <SpecialistIcon type="team" className="h-4 w-4 shrink-0" />
             <span className="max-[760px]:hidden">My AI team</span>
             <span className="ml-auto rounded-md bg-violet-300/10 px-1.5 py-0.5 text-[9px] font-bold text-violet-200 max-[760px]:hidden">
               02
             </span>
           </NavLink>
           <NavLink className={linkClass} to="/ai/personal-assistant">
-            <FaRegLightbulb className="shrink-0 text-base" />
+            <SpecialistIcon type="assistant" className="h-4 w-4 shrink-0" />
             <span className="max-[760px]:hidden">Personal assistant</span>
             <span className="ml-auto rounded bg-violet-300/10 px-1.5 py-0.5 text-[9px] font-bold text-violet-200 max-[760px]:hidden">
               Free
             </span>
           </NavLink>
           <NavLink className={linkClass} to="/ai/finance">
-            <FaFileInvoice className="shrink-0 text-base" />
+            <SpecialistIcon type="finance" className="h-4 w-4 shrink-0" />
             <span className="max-[760px]:hidden">Finance analyst</span>
           </NavLink>
         </nav>
@@ -84,7 +87,7 @@ export function AppSidebar() {
             <strong className="block truncate text-xs text-white">
               {user?.name || "Dharun K"}
             </strong>
-            <small className="text-[10px] text-[#898497]">Workspace owner</small>
+            <small className="text-[12px] text-[#898497]">Workspace owner</small>
           </span>
           <FaUserCircle className="text-[#898497] max-[760px]:hidden" />
         </button>

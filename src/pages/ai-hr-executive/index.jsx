@@ -1,7 +1,8 @@
 ﻿import { useState } from "react";
-import { FaArrowRight, FaUserTie } from "react-icons/fa";
+import { FaArrowRight } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "../../components/AppLayout";
+import SpecialistIcon from "../../components/SpecialistIcon";
 import AccessRequestPopup from "./popups/AccessRequestPopup";
 
 const features = [
@@ -28,7 +29,7 @@ export default function HrIndex() {
           <div className="relative max-w-[680px]">
             <div className="mb-5 flex items-center gap-3">
               <span className="grid h-12 w-12 place-items-center rounded-xl bg-orange-300/10 text-xl text-orange-200">
-                <FaUserTie />
+                <SpecialistIcon type="hr" className="h-5 w-5" />
               </span>
               <span className="rounded-full bg-orange-300/10 px-3 py-1.5 text-[9px] font-semibold text-orange-200">
                 In development

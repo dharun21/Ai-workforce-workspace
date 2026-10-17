@@ -2,25 +2,21 @@
 import { useNavigate } from "react-router-dom";
 import {
   FaArrowRight,
-  FaChartBar,
   FaChevronLeft,
   FaChevronRight,
   FaRegCalendarCheck,
   FaRegClock,
-  FaRegLightbulb,
-  FaRobot,
   FaSearch,
 } from "react-icons/fa";
-import { MdOutlineWork } from "react-icons/md";
-import { BsBarChartLineFill } from "react-icons/bs";
 import EmployeeCard from "../components/EmployeeCard";
 import { useAuth } from "./authentication/AuthContext";
 import { AppLayout } from "../components/AppLayout";
+import SpecialistIcon from "../components/SpecialistIcon";
 
 const employees = [
   {
     role: "AI Finance Analyst",
-    icon: <FaRobot />,
+    icon: <SpecialistIcon type="finance" />,
     status: "Purchased",
     access: "Your plan",
     tasks: "Ready",
@@ -30,7 +26,7 @@ const employees = [
   },
   {
     role: "AI Personal Assistant",
-    icon: <FaRegLightbulb />,
+    icon: <SpecialistIcon type="assistant" />,
     status: "Included free",
     access: "Included with Finance Analyst",
     tasks: "Ready",
@@ -40,17 +36,17 @@ const employees = [
   },
   {
     role: "AI HR Executive",
-    icon: <MdOutlineWork />,
-    status: "In progress",
+    icon: <SpecialistIcon type="hr" />,
+    status: "Coming soon",
     access: "Available soon",
-    tasks: "In progress",
+    tasks: "Coming soon",
     detail: "Streamline people operations and team requests.",
     color: "orange",
     path: "/ai/hr",
   },
   {
     role: "AI Sales Analyst",
-    icon: <BsBarChartLineFill />,
+    icon: <SpecialistIcon type="sales" />,
     status: "Coming soon",
     access: "Available soon",
     tasks: "Coming soon",
@@ -68,7 +64,7 @@ const highlights = [
       "Your Personal Assistant is included at no extra cost. Keep your day, reminders, and life admin in one calm place.",
     action: "Meet your assistant",
     path: "/ai/personal-assistant",
-    icon: <FaRegLightbulb />,
+    icon: <SpecialistIcon type="assistant" />,
     note: "FREE FOR YOU",
   },
   {
@@ -78,7 +74,7 @@ const highlights = [
       "Review your finance workspace, follow invoice activity, and keep the important numbers moving.",
     action: "Open Finance Analyst",
     path: "/ai/finance",
-    icon: <FaChartBar />,
+    icon: <SpecialistIcon type="finance" />,
     note: "IN YOUR WORKSPACE",
   },
   {
@@ -88,7 +84,7 @@ const highlights = [
       "Explore the specialists in your workspace and see what is coming next for your team.",
     action: "Explore the AI lineup",
     path: "#ai-catalog",
-    icon: <FaRobot />,
+    icon: <SpecialistIcon type="team" />,
     note: "2 READY FOR YOU",
   },
 ];
@@ -238,7 +234,7 @@ export default function Workspace() {
         >
           <div className="flex items-center gap-3.5">
             <span className="grid h-[43px] w-[43px] shrink-0 place-items-center rounded-xl border border-violet-300/20 bg-violet-300/10 text-[17px] text-violet-200">
-              <FaRobot />
+              <SpecialistIcon type="team" className="h-5 w-5" />
             </span>
             <div>
               <p className="mb-1.5 text-[9px] font-bold tracking-[0.15em] text-violet-300">
