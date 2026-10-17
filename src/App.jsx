@@ -10,8 +10,10 @@ import FinanceIndex from "./pages/ai-finance-analyst";
 import InvoiceDetailPage from "./pages/ai-finance-analyst/pages/InvoiceDetail";
 import HrIndex from "./pages/ai-hr-executive";
 import SalesIndex from "./pages/ai-sales-analyst";
+import PersonalAssistantIndex from "./pages/ai-personal-assistant";
 import LegacyFinancePage from "./pages/FinancePage";
 import LegacyInvoiceDetail from "./pages/InvoiceDetail";
+
 function App() {
   return (
     <AuthProvider>
@@ -23,6 +25,7 @@ function App() {
             <Route path="/" element={<Workspace />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/ai/personal-assistant" element={<PersonalAssistantIndex />} />
             <Route path="/ai/finance" element={<FinanceIndex />} />
             <Route path="/ai/finance/invoices/:id" element={<InvoiceDetailPage />} />
             <Route path="/ai/hr" element={<HrIndex />} />
@@ -36,4 +39,5 @@ function App() {
     </AuthProvider>
   );
 }
+
 export default App;

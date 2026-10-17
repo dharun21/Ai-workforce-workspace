@@ -1,8 +1,8 @@
 ﻿import { NavLink, useNavigate } from "react-router-dom";
 import {
-  FaChartBar,
   FaCog,
   FaFileInvoice,
+  FaRegLightbulb,
   FaRobot,
   FaSignOutAlt,
   FaUserCircle,
@@ -11,105 +11,110 @@ import logo from "../assets/background/ZG-icon.png";
 import { useAuth } from "../pages/authentication/AuthContext";
 import NotificationCenter from "./NotificationCenter";
 
+const baseLink =
+  "group flex h-11 items-center gap-3 rounded-xl px-3 text-sm text-[#9995a8] transition hover:bg-white/[0.045] hover:text-white max-[760px]:w-11 max-[760px]:justify-center max-[760px]:px-0";
+const activeLink = "bg-violet-300/10 font-semibold text-violet-200 hover:bg-violet-300/15";
+
 export function AppSidebar() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const linkClass = ({ isActive }) => `${baseLink} ${isActive ? activeLink : ""}`;
 
   return (
-    <aside className="sidebar">
-      <div>
-        <NavLink className="brand" to="/" aria-label="zengenAI home">
-          <img src={logo} alt="zengenAI" />
-          <span className="brand-name">zengenAI</span>
-        </NavLink>
-
-        <div className="workspace-switch">
-          <span className="workspace-mark">Z</span>
-          <span>
-            <small>WORKSPACE</small>
-            <strong>zengenAI</strong>
+    <aside className="z-20 flex h-screen w-[250px] shrink-0 flex-col border-r border-white/[0.07] bg-[#111018] px-4 py-6 max-[1050px]:w-[220px] max-[760px]:w-[66px] max-[760px]:items-center max-[760px]:px-2">
+      <div className="w-full">
+        <NavLink
+          className="mb-10 flex h-12 items-center gap-3 px-2 max-[760px]:justify-center max-[760px]:px-0"
+          to="/"
+          aria-label="ZengenAI home"
+        >
+          <img className="h-10 w-10 rounded-full object-cover" src={logo} alt="" />
+          <span className="font-display text-lg font-bold tracking-tight text-white max-[760px]:hidden">
+            ZengenAI
           </span>
-          <span className="switch-chevron">⌄</span>
-        </div>
-
-        <p className="nav-label">WORKSPACE</p>
-        <nav className="side-nav" aria-label="Main navigation">
-          <NavLink end className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`} to="/">
-            <FaRobot />
-            <span>AI employees</span>
-            <span className="nav-count">03</span>
+        </NavLink>
+        <p className="mb-3 px-3 text-[9px] font-bold tracking-[0.18em] text-[#706b80] max-[760px]:hidden">
+          WORKSPACE
+        </p>
+        <nav className="grid gap-1.5" aria-label="Main navigation">
+          <NavLink end className={linkClass} to="/">
+            <FaRobot className="shrink-0 text-base" />
+            <span className="max-[760px]:hidden">My AI team</span>
+            <span className="ml-auto rounded-md bg-violet-300/10 px-1.5 py-0.5 text-[9px] font-bold text-violet-200 max-[760px]:hidden">
+              02
+            </span>
           </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-            to="/ai/finance"
-          >
-            <FaFileInvoice />
-            <span>Finance analyst</span>
+          <NavLink className={linkClass} to="/ai/personal-assistant">
+            <FaRegLightbulb className="shrink-0 text-base" />
+            <span className="max-[760px]:hidden">Personal assistant</span>
+            <span className="ml-auto rounded bg-violet-300/10 px-1.5 py-0.5 text-[9px] font-bold text-violet-200 max-[760px]:hidden">
+              Free
+            </span>
           </NavLink>
-          <NavLink className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`} to="/ai/hr">
-            <FaUserCircle />
-            <span>HR executive</span>
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-            to="/ai/sales"
-          >
-            <FaChartBar />
-            <span>Sales analyst</span>
+          <NavLink className={linkClass} to="/ai/finance">
+            <FaFileInvoice className="shrink-0 text-base" />
+            <span className="max-[760px]:hidden">Finance analyst</span>
           </NavLink>
         </nav>
-
-        <p className="nav-label nav-label-spaced">PREFERENCES</p>
-        <NavLink
-          className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-          to="/settings"
-        >
-          <FaCog />
-          <span>Settings</span>
+        <p className="mb-3 mt-9 px-3 text-[9px] font-bold tracking-[0.18em] text-[#706b80] max-[760px]:hidden">
+          PREFERENCES
+        </p>
+        <NavLink className={linkClass} to="/settings">
+          <FaCog className="shrink-0 text-base" />
+          <span className="max-[760px]:hidden">Settings</span>
         </NavLink>
       </div>
-
-      <div className="sidebar-bottom">
-        <div className="plan-card">
-          <span className="plan-icon">✦</span>
-          <strong>Make work flow.</strong>
-          <p>Your AI team is ready when you are.</p>
+      <div className="mt-auto w-full">
+        <div className="mb-4 rounded-xl border border-violet-300/15 bg-gradient-to-br from-violet-300/[0.09] to-transparent p-4 max-[760px]:hidden">
+          <span className="mb-2 block text-violet-200">✦</span>
+          <strong className="block text-xs text-white">Make work flow.</strong>
+          <p className="mb-0 mt-1.5 text-[10px] leading-relaxed text-[#9995a8]">
+            Your AI team is ready when you are.
+          </p>
         </div>
-        <button className="profile-row" type="button" onClick={() => navigate("/profile")}>
-          <span className="avatar avatar-initials">{user?.initials || "DK"}</span>
-          <span className="profile-meta">
-            <strong>{user?.name || "Dharun K"}</strong>
-            <small>Workspace owner</small>
+        <button
+          className="mb-2 flex w-full items-center gap-3 border-t border-white/[0.07] px-2 py-4 text-left hover:bg-white/[0.03] max-[760px]:justify-center"
+          type="button"
+          onClick={() => navigate("/profile")}
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-violet-300/60 to-[#40334f] text-[10px] font-bold text-white">
+            {user?.initials || "DK"}
           </span>
-          <FaUserCircle className="profile-more" />
+          <span className="min-w-0 flex-1 max-[760px]:hidden">
+            <strong className="block truncate text-xs text-white">
+              {user?.name || "Dharun K"}
+            </strong>
+            <small className="text-[10px] text-[#898497]">Workspace owner</small>
+          </span>
+          <FaUserCircle className="text-[#898497] max-[760px]:hidden" />
         </button>
-        <button className="nav-item signout-nav" type="button" onClick={() => navigate("/logout")}>
-          <FaSignOutAlt />
-          <span>Sign out</span>
+        <button className={`${baseLink} w-full`} type="button" onClick={() => navigate("/logout")}>
+          <FaSignOutAlt className="shrink-0 text-base" />
+          <span className="max-[760px]:hidden">Sign out</span>
         </button>
       </div>
     </aside>
   );
 }
 
-export function AppLayout({ children, section = "Workspace", current = "AI employees" }) {
+export function AppLayout({ children, section = "Workspace", current = "My AI team" }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   return (
-    <main className="app-shell theme-dark">
+    <main className="flex h-screen min-h-0 overflow-hidden bg-[#0c0b12] text-[#f5f3ff]">
       <AppSidebar />
-      <section className="main-panel">
-        <header className="topbar">
-          <div className="breadcrumbs">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="z-10 flex h-[70px] shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#0f0e16]/95 px-8 backdrop-blur max-[760px]:px-4">
+          <div className="flex items-center gap-3 text-xs text-[#9995a8]">
             <span>{section}</span>
-            <span className="crumb-slash">/</span>
-            <strong>{current}</strong>
+            <span className="text-[#514d5d]">/</span>
+            <strong className="font-medium text-white">{current}</strong>
           </div>
-          <div className="topbar-actions">
+          <div className="flex items-center gap-4">
             <NotificationCenter />
             <button
-              className="avatar avatar-top profile-avatar-button"
+              className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-[#d7bea3] to-[#755b55] text-[10px] font-bold text-white"
               type="button"
               aria-label="Open profile"
               onClick={() => navigate("/profile")}
@@ -118,7 +123,7 @@ export function AppLayout({ children, section = "Workspace", current = "AI emplo
             </button>
           </div>
         </header>
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </section>
     </main>
   );
