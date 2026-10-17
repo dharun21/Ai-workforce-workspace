@@ -1,237 +1,204 @@
-import { useState, useEffect } from "react";
+﻿import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaRobot, FaSignOutAlt, FaChartBar } from "react-icons/fa";
+import { FaArrowRight, FaArrowUp, FaBell, FaChartBar, FaRobot, FaSearch } from "react-icons/fa";
 import { MdOutlineWork } from "react-icons/md";
 import { BsBarChartLineFill } from "react-icons/bs";
-import logo from "../assets/background/ZG-white.png"
-import bgImage from "../assets/background/bg-1.png";
-
+import EmployeeCard from "../components/EmployeeCard";
+import { useAuth } from "./authentication/AuthContext";
+import { AppLayout } from "../components/AppLayout";
 const employees = [
   {
-    id: 1,
-    name: "AI Finance Analyst",
-    icon: <FaRobot size={20} />,
+    role: "AI Finance Analyst",
+    icon: <FaRobot />,
     status: "Active",
     tasks: 128,
+    detail: "Reviews invoices, flags risk, and keeps your books in sync.",
+    color: "violet",
+    metric: "+18.4%",
+    path: "/ai/finance",
   },
   {
-    id: 2,
-    name: "AI HR Executive",
-    icon: <MdOutlineWork size={20} />,
-    status: "Disabled",
-    tasks: "-",
+    role: "AI HR Executive",
+    icon: <MdOutlineWork />,
+    status: "Coming soon",
+    tasks: "—",
+    detail: "Streamline people operations and team requests.",
+    color: "orange",
+    path: "/ai/hr",
   },
   {
-    id: 3,
-    name: "AI Sales Analyst",
-    icon: <BsBarChartLineFill size={20} />,
-    status: "Disabled",
-    tasks: "-",
+    role: "AI Sales Analyst",
+    icon: <BsBarChartLineFill />,
+    status: "Coming soon",
+    tasks: "—",
+    detail: "Turn pipeline signals into your next best move.",
+    color: "blue",
+    path: "/ai/sales",
   },
 ];
-
-function Workspace() {
-
-  const [darkMode, setDarkMode] = useState(true);
+export default function Workspace() {
+  const { user } = useAuth();
+  const [search, setSearch] = useState("");
   const navigate = useNavigate();
-
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [darkMode]);
-
-  
+  const filtered = useMemo(
+    () =>
+      employees.filter((employee) =>
+        `${employee.role} ${employee.detail}`.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [search],
+  );
   return (
-    <div className={`relative min-h-screen overflow-hidden transition-colors duration-500 ${darkMode ? "text-white" : "text-gray-900"
-      }`}>
-
-      {/* Smooth Gradient Background */}
-      <div className="absolute inset-0 bg-[#0b0f19]" />
-
-      <div
-        className="absolute inset-0 animate-gradient"
-        style={{
-          backgroundSize: "200% 200%",
-          animation: "gradientShift 20s ease infinite",
-          background: `
-      radial-gradient(60% 60% at 70% 60%, rgba(59,130,246,0.6), transparent 70%),
-      radial-gradient(50% 50% at 30% 40%, rgba(30,64,175,0.5), transparent 70%)
-    `
-        }}
-      />
-
-      {/* Soft Blur Overlay */}
-      <div className="absolute inset-0 backdrop-blur-2xl bg-black/40" />
-
-      {/* MAIN LAYOUT */}
-      <div className="relative z-10 flex min-h-screen">
-
-        {/* LEFT DRAWER */}
-        <div className="w-64 bg-white/10 backdrop-blur-xl border-r border-white/20 flex flex-col justify-between p-6">
-
-          {/* Top Section */}
+    <AppLayout>
+      <div className="page-content">
+        <div className="welcome-row">
           <div>
-            <div className="mb-8">
-              <img src={logo} alt="Logo" className="h-15 w-auto" />
-            </div>
-
-            <div className="mb-8">
-              <p className="text-gray-300 text-sm">Hello,</p>
-              <h2 className="text-lg font-semibold">Dharun 👋</h2>
-            </div>
-
-            <div className="space-y-3">
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 transition">
-                <FaRobot />
-                AI Employees
-              </button>
-
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/20 transition">
-                <FaChartBar />
-                Analytics
-              </button>
-
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/20 transition">
-                <MdOutlineWork />
-                Settings
-              </button>
-            </div>
+            <p className="eyebrow">
+              <span className="eyebrow-line" />
+              YOUR COMMAND CENTER
+            </p>
+            <h1>
+              Good morning, {user?.name?.split(" ")[0] || "Dharun"}
+              <span className="wave">✦</span>
+            </h1>
+            <p className="page-subtitle">Your AI team is ready to make today count.</p>
           </div>
-
-          {/* Logout */}
-          <div>
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-500/20 text-red-400 transition">
-              <FaSignOutAlt />
-              Logout
+          <span className="date-pill">
+            <span className="date-dot" />
+            Saturday, October 17, 2026
+          </span>
+        </div>
+        <section className="hero-card">
+          <div className="hero-content">
+            <span className="hero-kicker">
+              <span className="live-pulse" />
+              YOUR WORKFORCE, AT A GLANCE
+            </span>
+            <h2>
+              Meet your new
+              <br />
+              favorite coworkers.
+            </h2>
+            <p>
+              Intelligent teammates that take busywork off your plate, so your people can do their
+              best work.
+            </p>
+            <button className="hero-button" onClick={() => navigate("/ai/finance")} type="button">
+              Explore your AI team <FaArrowRight />
             </button>
           </div>
-        </div>
-
-        {/* RIGHT CONTENT */}
-        <div className="flex-1 p-10">
-          {/* Header Row */}
-          <div className="flex justify-between items-start mb-10">
-
-            {/* LEFT SIDE (Title + Subtitle) */}
+          <div className="hero-art" aria-hidden="true">
+            <div className="orbit orbit-one" />
+            <div className="orbit orbit-two" />
+            <div className="orbit orbit-three" />
+            <div className="hero-glow" />
+            <div className="hero-core">
+              <FaRobot />
+            </div>
+            <span className="float-chip chip-one">
+              <i />
+              thinking ahead
+            </span>
+            <span className="float-chip chip-two">
+              <FaChartBar />
+              24 tasks today
+            </span>
+            <span className="float-chip chip-three">✦&nbsp; always learning</span>
+          </div>
+        </section>
+        <section className="stats-grid">
+          <article className="stat-card">
+            <div className="stat-head">
+              <span>AI employees</span>
+              <span className="stat-icon lavender">
+                <FaRobot />
+              </span>
+            </div>
+            <div className="stat-value">
+              03{" "}
+              <span className="stat-change">
+                <FaArrowUp /> 1 new
+              </span>
+            </div>
+            <p>Across your workspace</p>
+          </article>
+          <article className="stat-card">
+            <div className="stat-head">
+              <span>Tasks completed</span>
+              <span className="stat-icon mint">✓</span>
+            </div>
+            <div className="stat-value">
+              128{" "}
+              <span className="stat-change">
+                <FaArrowUp /> 12.8%
+              </span>
+            </div>
+            <p>Compared to last month</p>
+          </article>
+          <article className="stat-card">
+            <div className="stat-head">
+              <span>Hours given back</span>
+              <span className="stat-icon peach">◷</span>
+            </div>
+            <div className="stat-value">
+              36.5 <span className="stat-unit">hrs</span>
+            </div>
+            <p>Time back for your team</p>
+          </article>
+          <article className="stat-card">
+            <div className="stat-head">
+              <span>Workforce status</span>
+              <span className="stat-icon sky">
+                <FaBell />
+              </span>
+            </div>
+            <div className="stat-value status-value">
+              <span className="live-pulse" />1 online <span className="status-total">/ 3</span>
+            </div>
+            <p>All systems looking good</p>
+          </article>
+        </section>
+        <section className="employees-section">
+          <div className="section-heading">
             <div>
-              <h1 className="text-3xl font-bold">
-                AI Workforce Workspace
-              </h1>
-              <p className="text-gray-300 mt-2">
-                Deploy and manage your AI Employees
-              </p>
+              <p className="eyebrow">BUILT TO WORK WITH YOU</p>
+              <h2>
+                Your AI employees <span className="section-count">03</span>
+              </h2>
             </div>
-
-            {/* RIGHT SIDE (Top Controls) */}
-            <div className="flex items-center gap-4">
-
-              {/* Search */}
-              <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Search anything"
-                  className="bg-transparent outline-none text-sm text-white placeholder-gray-300"
-                />
-              </div>
-
-              {/* Notification */}
-              <div className="bg-white/10 p-2 rounded-lg cursor-pointer hover:bg-white/20 transition">
-                🔔
-              </div>
-
-              {/* Theme Switch */}
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={!darkMode}
-                  onChange={() => setDarkMode(!darkMode)}
-                />
-                <span className="slider">
-                  <span className="star star_1"></span>
-                  <span className="star star_2"></span>
-                  <span className="star star_3"></span>
-                  <svg viewBox="0 0 16 16" className="cloud" fill="white">
-                    <path d="M6 16a4 4 0 1 1 0-8 5 5 0 0 1 9 2 3 3 0 0 1-3 6H6z" />
-                  </svg>
-                </span>
-              </label>
-
-              {/* Profile Pic */}
-              <img
-                src="https://i.pravatar.cc/40"
-                alt="Profile"
-                className="w-10 h-10 rounded-full border-2 border-white/30"
+            <label className="search-box dashboard-search">
+              <FaSearch />
+              <input
+                aria-label="Search employees"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search employees..."
               />
-
-            </div>
+            </label>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {employees.map((employee) => (
-              <div
-                key={employee.id}
-                className="bg-white/10 backdrop-blur-xl p-6 rounded-xl border border-white/20 shadow-lg hover:scale-105 transition"
-              >
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-500/20 text-blue-300 p-3 rounded-lg">
-                      {employee.icon}
-                    </div>
-                    <h2 className="text-lg font-semibold">
-                      {employee.name}
-                    </h2>
-                  </div>
-
-                  <span
-                    className={`px-3 py-1 text-xs font-semibold rounded-full ${employee.status === "Active"
-                      ? "bg-green-500/20 text-green-300"
-                      : "bg-gray-400/20 text-gray-300"
-                      }`}
-                  >
-                    {employee.status === "Active"
-                      ? "🟢 Active"
-                      : "⚪ Disabled"}
-                  </span>
-                </div>
-
-                <div className="mt-8">
-                  <p className="text-sm text-gray-300">Tasks</p>
-                  <p className="text-2xl font-bold mt-1">
-                    {employee.tasks}
-                  </p>
-                </div>
-
-                <div className="mt-8">
-                  <button
-                    disabled={employee.status !== "Active"}
-                    onClick={() => {
-                      if (employee.name === "AI Finance Analyst") {
-                        navigate("/finance");
-                      }
-                    }}
-                    className={`w-full py-2 rounded-lg font-medium transition ${employee.status === "Active"
-                        ? "bg-blue-600 hover:bg-blue-700"
-                        : "bg-gray-500/40 cursor-not-allowed"
-                      }`}
-                  >
-                    {employee.status === "Active"
-                      ? "Open"
-                      : "Coming Soon"}
-                  </button>
-                </div>
-              </div>
+          <div className="employee-grid">
+            {filtered.map((employee, index) => (
+              <EmployeeCard
+                key={employee.role}
+                employee={employee}
+                index={index}
+                onOpen={() => navigate(employee.path)}
+              />
             ))}
+            {filtered.length === 0 && (
+              <div className="empty-search">
+                No AI employees match “{search}”. Try another search.
+              </div>
+            )}
           </div>
-
-        </div>
-
+        </section>
+        <footer className="page-footer">
+          <span>© 2026 zengenAI</span>
+          <span>
+            Thoughtfully built for better work <b>✦</b>
+          </span>
+          <span>Need a hand?</span>
+        </footer>
       </div>
-    </div>
+    </AppLayout>
   );
 }
-
-export default Workspace;
