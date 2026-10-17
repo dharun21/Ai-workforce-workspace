@@ -14,6 +14,7 @@ import PersonalAssistantIndex from "./pages/ai-personal-assistant";
 import LegacyFinancePage from "./pages/FinancePage";
 import LegacyInvoiceDetail from "./pages/InvoiceDetail";
 import LandingPage from "./pages/LandingPage";
+import PricingPage from "./pages/PricingPage";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="/logout" element={<LogoutPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/workspace" element={<Workspace />} />
+            <Route path="/pricing" element={<PricingPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/ai/personal-assistant" element={<PersonalAssistantIndex />} />

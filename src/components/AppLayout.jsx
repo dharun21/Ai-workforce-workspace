@@ -1,6 +1,7 @@
 ﻿import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaCog,
+  FaDollarSign,
   FaSignOutAlt,
   FaUserCircle,
 } from "react-icons/fa";
@@ -65,6 +66,10 @@ export function AppSidebar() {
         <NavLink className={linkClass} to="/settings">
           <FaCog className="shrink-0 text-base" />
           <span className="max-[760px]:hidden">Settings</span>
+        </NavLink>
+        <NavLink className={linkClass} to="/pricing">
+          <FaDollarSign className="h-4 w-4 shrink-0" />
+          <span className="max-[760px]:hidden">Pricing</span>
         </NavLink>
       </div>
       <div className="mt-auto w-full">

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { FaArrowRight, FaCheck, FaMobileAlt } from "react-icons/fa";
 import { useAuth } from "./authentication/AuthContext";
 import SpecialistIcon from "../components/SpecialistIcon";
+import PricingPlans from "../components/PricingPlans";
 
 const specialists = [
   {
@@ -167,6 +168,7 @@ export default function LandingPage() {
         </Link>
         <nav className="hidden items-center gap-8 text-[11px] text-[#aaa4b8] md:flex" aria-label="Website navigation">
           <a className="transition hover:text-white" href="#team">AI team</a>
+          <a className="transition hover:text-white" href="#pricing">Pricing</a>
           <a className="transition hover:text-white" href="#how-it-works">How it works</a>
           <a className="transition hover:text-white" href="#mobile">Mobile apps</a>
         </nav>
@@ -260,6 +262,8 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      <PricingPlans />
 
       <section className="border-y border-white/[0.06] bg-white/[0.015]" id="how-it-works">
         <div className="mx-auto grid w-full max-w-[1320px] gap-12 px-6 py-20 lg:grid-cols-[0.8fr_1.2fr] lg:px-10 lg:py-24">
