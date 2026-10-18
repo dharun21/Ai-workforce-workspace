@@ -2,11 +2,11 @@
 import { useNavigate } from "react-router-dom";
 import {
   FaArrowRight,
-  FaExternalLinkAlt,
   FaCalendarCheck,
   FaCheck,
   FaChevronRight,
   FaClock,
+  FaCommentDots,
   FaHeart,
   FaLightbulb,
   FaPlus,
@@ -22,6 +22,8 @@ import SpecialistIcon from "../../components/SpecialistIcon";
 import ReminderPopup from "./popups/ReminderPopup";
 import QuickCapturePopup from "./popups/QuickCapturePopup";
 import SuggestionPopup from "./popups/SuggestionPopup";
+import AssistantOnboarding, { hasAssistantSetup } from "./AssistantOnboarding";
+import AssistantChatPopup from "./popups/AssistantChatPopup";
 
 const starterTasks = [
   { id: 1, label: "Choose the one thing that matters most today", complete: false },
@@ -39,6 +41,15 @@ const starterReminders = [
     complete: false,
   },
 ];
+const THOUGHTS_KEY = "zengen-personal-assistant-thoughts";
+
+function readThoughts() {
+  try {
+    return JSON.parse(localStorage.getItem(THOUGHTS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
 
 const suggestions = {
   plan: {
@@ -133,14 +144,23 @@ function formatClock(value) {
 }
 
 export default function PersonalAssistantIndex() {
+  const [assistantSetup, setAssistantSetup] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("zengen-personal-assistant-setup")) || null;
+    } catch {
+      return null;
+    }
+  });
+  const [assistantReady, setAssistantReady] = useState(() => hasAssistantSetup());
   const [tasks, setTasks] = useState(starterTasks);
   const [reminders, setReminders] = useState(starterReminders);
   const [checkIn, setCheckIn] = useState("");
-  const [capture, setCapture] = useState("");
+  const [thoughts, setThoughts] = useState(readThoughts);
   const [savedTip, setSavedTip] = useState("");
   const [activeSuggestion, setActiveSuggestion] = useState(null);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [isCaptureOpen, setIsCaptureOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const navigate = useNavigate();
   const completedCount = tasks.filter((task) => task.complete).length;
   const openReminders = reminders.filter((reminder) => !reminder.complete).length;
@@ -170,8 +190,16 @@ export default function PersonalAssistantIndex() {
   }
 
   function addCapturedThought(thought) {
-    setCapture(thought);
+    const next = [{ id: `${Date.now()}`, text: thought, createdAt: new Date().toISOString() }, ...thoughts];
+    setThoughts(next);
+    localStorage.setItem(THOUGHTS_KEY, JSON.stringify(next));
     setIsCaptureOpen(false);
+  }
+
+  function removeThought(id) {
+    const next = thoughts.filter((thought) => thought.id !== id);
+    setThoughts(next);
+    localStorage.setItem(THOUGHTS_KEY, JSON.stringify(next));
   }
 
   function saveSuggestion() {
@@ -181,6 +209,19 @@ export default function PersonalAssistantIndex() {
       if (current.some((task) => task.label === activeSuggestion.task)) return current;
       return [...current, { id: Date.now(), label: activeSuggestion.task, complete: false }];
     });
+  }
+
+  if (!assistantReady) {
+    return (
+      <AppLayout section="My AI team" current="Personal assistant">
+        <AssistantOnboarding
+          onComplete={(setup) => {
+            setAssistantSetup(setup);
+            setAssistantReady(true);
+          }}
+        />
+      </AppLayout>
+    );
   }
 
   return (
@@ -195,23 +236,33 @@ export default function PersonalAssistantIndex() {
               <i className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> YOUR PERSONAL ASSISTANT
             </span>
             <h1 className="mb-3 font-display text-[clamp(30px,4vw,44px)] font-bold leading-[1.08] tracking-[-0.05em]">
-              A little more room
-              <br />
-              for <em className="not-italic text-violet-300">your life.</em>
+              {assistantSetup?.name ? (
+                <>
+                  Welcome back, {assistantSetup.name}.
+                  <br />
+                  <em className="not-italic text-violet-300">Here’s your day.</em>
+                </>
+              ) : (
+                <>
+                  A little more room
+                  <br />
+                  for <em className="not-italic text-violet-300">your life.</em>
+                </>
+              )}
             </h1>
             <p className="max-w-[470px] text-xs leading-relaxed text-[#aaa4b8]">
               Gentle reminders, clearer next steps, and thoughtful support for the things you’re
               carrying.
             </p>
             <div className="mt-5 flex items-center gap-4 max-[500px]:items-start max-[500px]:flex-col">
-              <button
-                className="inline-flex items-center gap-2 rounded-lg bg-violet-300 px-4 py-3 text-[10px] font-bold text-[#171222] hover:bg-violet-200"
-                type="button"
-                onClick={() => setIsCaptureOpen(true)}
-              >
-                <FaRegStickyNote />
-                Capture a thought
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button className="inline-flex items-center gap-2 rounded-lg bg-violet-300 px-4 py-3 text-[10px] font-bold text-[#171222] hover:bg-violet-200" type="button" onClick={() => setIsChatOpen(true)}>
+                  <FaCommentDots /> Ask me
+                </button>
+                <button className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3 text-[10px] font-semibold text-violet-100 hover:bg-white/[0.06]" type="button" onClick={() => setIsCaptureOpen(true)}>
+                  <FaRegStickyNote /> Capture a thought
+                </button>
+              </div>
               <span className="flex items-center gap-2 text-[10px] text-[#aaa4b8]">
                 <FaHeart className="text-rose-300" />
                 Your day, your pace
@@ -555,22 +606,19 @@ export default function PersonalAssistantIndex() {
               </div>
               <FaRegStickyNote className="text-violet-200" />
             </div>
-            {capture ? (
-              <div className="mt-4 flex items-start gap-2 rounded-lg border border-violet-300/15 bg-violet-300/[0.04] p-3">
-                <FaRegLightbulb className="mt-0.5 text-violet-200" />
-                <p className="mb-0 flex-1 text-[10px] leading-relaxed text-[#c8c1d5]">{capture}</p>
-                <button
-                  className="text-[10px] text-[#777285] hover:text-rose-200"
-                  type="button"
-                  onClick={() => setCapture("")}
-                  aria-label="Delete captured thought"
-                >
-                  <FaTrashAlt />
-                </button>
+            {thoughts.length ? (
+              <div className="mt-4 max-h-56 space-y-2 overflow-y-auto pr-1">
+                {thoughts.map((thought) => (
+                  <div key={thought.id} className="flex items-start gap-2 rounded-lg border border-violet-300/15 bg-violet-300/[0.04] p-3">
+                    <FaRegLightbulb className="mt-0.5 shrink-0 text-violet-200" />
+                    <p className="mb-0 flex-1 whitespace-pre-wrap break-words text-[10px] leading-relaxed text-[#c8c1d5]">{thought.text}</p>
+                    <button className="text-[10px] text-[#777285] hover:text-rose-200" type="button" onClick={() => removeThought(thought.id)} aria-label="Delete captured thought"><FaTrashAlt /></button>
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="mb-0 mt-3 text-[10px] leading-relaxed text-[#9995a8]">
-                A thought, an errand, an idea. Save it now and sort it out later.
+                Your saved thoughts will stay listed here until you remove them.
               </p>
             )}
             <button
@@ -636,6 +684,9 @@ export default function PersonalAssistantIndex() {
       )}
       {isCaptureOpen && (
         <QuickCapturePopup onClose={() => setIsCaptureOpen(false)} onSave={addCapturedThought} />
+      )}
+      {isChatOpen && (
+        <AssistantChatPopup onClose={() => setIsChatOpen(false)} thoughts={thoughts} />
       )}
       {activeSuggestion && (
         <SuggestionPopup

@@ -1,6 +1,6 @@
 ﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaArrowRight, FaUpload } from "react-icons/fa";
+import { FaArrowRight, FaCheck, FaMoon, FaSun, FaUpload } from "react-icons/fa";
 import { AppLayout } from "../../components/AppLayout";
 import SpecialistIcon from "../../components/SpecialistIcon";
 import { DEMO_CREDENTIALS } from "../authentication/credentials";
@@ -9,24 +9,30 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [prefs, setPrefs] = useState(() => {
     try {
-      return (
-        JSON.parse(localStorage.getItem("zengenai-workforce-preferences")) || {
-          emailUpdates: true,
-          taskDigest: false,
-          defaultEmployee: "Finance analyst",
-        }
-      );
+      const stored = JSON.parse(localStorage.getItem("zengenai-workforce-preferences")) || {};
+      return {
+        emailUpdates: true,
+        taskDigest: false,
+        defaultEmployee: "Finance analyst",
+        ...stored,
+        theme: localStorage.getItem("zengen-theme") || stored.theme || "dark",
+      };
     } catch {
-      return { emailUpdates: true, taskDigest: false, defaultEmployee: "Finance analyst" };
+      return { emailUpdates: true, taskDigest: false, defaultEmployee: "Finance analyst", theme: "dark" };
     }
   });
   const navigate = useNavigate();
   function update(key, value) {
     setSaved(false);
     setPrefs((previous) => ({ ...previous, [key]: value }));
+    if (key === "theme") {
+      document.documentElement.dataset.theme = value;
+      localStorage.setItem("zengen-theme", value);
+    }
   }
   function save() {
     localStorage.setItem("zengenai-workforce-preferences", JSON.stringify(prefs));
+    localStorage.setItem("zengen-theme", prefs.theme || localStorage.getItem("zengen-theme") || "dark");
     setSaved(true);
   }
   const panel = "rounded-xl border border-white/[0.07] bg-[#171620] p-5";
@@ -46,6 +52,7 @@ export default function SettingsPage() {
           <nav className="flex flex-col gap-1 max-[760px]:flex-row max-[760px]:overflow-x-auto">
             {[
               ["General", "#general"],
+              ["Appearance", "#appearance"],
               ["Notifications", "#notifications"],
               ["Account", "#account"],
             ].map(([label, target], index) => (
@@ -89,6 +96,26 @@ export default function SettingsPage() {
                   <option>Sales analyst</option>
                 </select>
               </label>
+            </section>
+            <section className={panel} id="appearance">
+              <div className="mb-4 flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-300/10 text-amber-200">
+                  {prefs.theme === "light" ? <FaSun /> : <FaMoon />}
+                </span>
+                <div>
+                  <h2 className="mb-1 font-display text-sm font-semibold">Appearance</h2>
+                  <p className="mb-0 text-[10px] text-[#9995a8]">Choose the theme for your workspace.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 border-t border-white/[0.07] pt-4 max-[500px]:grid-cols-1">
+                {[{ id: "dark", label: "Dark", icon: FaMoon, detail: "The current ZengenAI look" }, { id: "light", label: "Light", icon: FaSun, detail: "A brighter workspace" }].map(({ id, label, icon: Icon, detail }) => (
+                  <button key={id} type="button" aria-pressed={(prefs.theme || "dark") === id} onClick={() => update("theme", id)} className={`flex items-center gap-3 rounded-xl border p-4 text-left transition ${(prefs.theme || "dark") === id ? "border-violet-300/40 bg-violet-300/[0.08]" : "border-white/10 hover:bg-white/[0.03]"}`}>
+                    <span className="grid h-9 w-9 place-items-center rounded-lg bg-violet-300/10 text-violet-200"><Icon /></span>
+                    <span><strong className="block text-xs">{label}</strong><small className="mt-1 block text-[9px] text-[#9995a8]">{detail}</small></span>
+                    {(prefs.theme || "dark") === id && <FaCheck className="ml-auto text-[10px] text-emerald-300" />}
+                  </button>
+                ))}
+              </div>
             </section>
             <section className={panel} id="notifications">
               <div className="mb-4 flex items-center gap-3">

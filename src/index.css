@@ -87,6 +87,106 @@
   background: #111018;
 }
 
+/* Light theme overrides for the app's existing Tailwind dark surfaces. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="light"] body {
+  background: #f7f6fa;
+  color: #292434;
+}
+
+:root[data-theme="light"] [class*="bg-[#0c0b12]"] {
+  background-color: #f7f6fa !important;
+}
+
+:root[data-theme="light"] [class*="bg-[#111018]"],
+:root[data-theme="light"] [class*="bg-[#0f0e16]"] {
+  background-color: #efedf4 !important;
+}
+
+:root[data-theme="light"] [class*="bg-[#171620]"],
+:root[data-theme="light"] [class*="bg-[#14131c]"] {
+  background-color: #ffffff !important;
+}
+
+:root[data-theme="light"] [class*="bg-[#191723]"] {
+  background-color: #f5f3f8 !important;
+}
+
+:root[data-theme="light"] [class*="from-[#251f35]"] {
+  background-image: linear-gradient(120deg, #eee8fa, #f8f6fb 55%, #edf0f8) !important;
+}
+
+:root[data-theme="light"] [class~="text-white"],
+:root[data-theme="light"] [class*="text-[#f5f3ff]"] {
+  color: #272231 !important;
+}
+
+:root[data-theme="light"] [class*="text-[#dedbe6]"],
+:root[data-theme="light"] [class*="text-[#d1cddd]"],
+:root[data-theme="light"] [class*="text-[#c8c1d5]"],
+:root[data-theme="light"] [class*="text-[#c5c0d0]"],
+:root[data-theme="light"] [class*="text-[#b5b0c0]"],
+:root[data-theme="light"] [class*="text-[#aaa5b7]"],
+:root[data-theme="light"] [class*="text-[#aaa4b8]"],
+:root[data-theme="light"] [class*="text-[#9995a8]"],
+:root[data-theme="light"] [class*="text-[#898497]"],
+:root[data-theme="light"] [class*="text-[#777285]"] {
+  color: #655e70 !important;
+}
+
+:root[data-theme="light"] [class*="text-violet-200"],
+:root[data-theme="light"] [class*="text-violet-100"] {
+  color: #694da0 !important;
+}
+
+:root[data-theme="light"] [class*="text-emerald-200"],
+:root[data-theme="light"] [class*="text-emerald-300"] {
+  color: #187653 !important;
+}
+
+:root[data-theme="light"] [class*="text-amber-200"],
+:root[data-theme="light"] [class*="text-orange-200"] {
+  color: #8d6117 !important;
+}
+
+:root[data-theme="light"] [class*="text-rose-200"],
+:root[data-theme="light"] [class*="text-rose-300"] {
+  color: #a33e61 !important;
+}
+
+:root[data-theme="light"] [class*="text-sky-200"] {
+  color: #286a91 !important;
+}
+
+:root[data-theme="light"] [class*="border-white/"] {
+  border-color: rgba(64, 52, 83, 0.13) !important;
+}
+
+:root[data-theme="light"] [class*="divide-white/"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(64, 52, 83, 0.1) !important;
+}
+
+:root[data-theme="light"] [class*="bg-white/"] {
+  background-color: rgba(62, 49, 82, 0.045) !important;
+}
+
+:root[data-theme="light"] * {
+  scrollbar-color: #a99ac3 #efedf4;
+}
+
+:root[data-theme="light"] *::-webkit-scrollbar-track,
+:root[data-theme="light"] *::-webkit-scrollbar-corner {
+  background: #efedf4;
+}
+
+:root[data-theme="light"] *::-webkit-scrollbar-thumb {
+  border-color: #efedf4;
+  background: linear-gradient(180deg, #b69edc, #8b79ad);
+}
+
 /* Keep the landing page scrollable without showing the document scrollbar. */
 html:has(.landing-page),
 body:has(.landing-page) {
