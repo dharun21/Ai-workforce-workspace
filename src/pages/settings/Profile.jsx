@@ -1,15 +1,26 @@
 ﻿import { useState } from "react";
 import { AppLayout } from "../../components/AppLayout";
 import { useAuth } from "../authentication/AuthContext";
+import { apiErrorMessage } from "../../api/client";
 
 export default function ProfilePage() {
   const { user, updateProfile } = useAuth();
   const [name, setName] = useState(user?.name || "Dharun K");
   const [saved, setSaved] = useState(false);
-  function submit(event) {
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  async function submit(event) {
     event.preventDefault();
-    updateProfile({ name });
-    setSaved(true);
+    setSaving(true);
+    setError("");
+    try {
+      await updateProfile({ name });
+      setSaved(true);
+    } catch (requestError) {
+      setError(apiErrorMessage(requestError, "Could not update your profile."));
+    } finally {
+      setSaving(false);
+    }
   }
   return (
     <AppLayout section="Account" current="Profile">
@@ -40,6 +51,7 @@ export default function ProfilePage() {
               value={name}
               onChange={(event) => {
                 setSaved(false);
+                setError("");
                 setName(event.target.value);
               }}
             />
@@ -54,12 +66,14 @@ export default function ProfilePage() {
             />
           </label>
           <div className="flex items-center justify-end gap-4 border-t border-white/[0.07] pt-4">
+            {error && <span role="alert" className="mr-auto text-[10px] text-rose-200">{error}</span>}
             {saved && <span className="text-[10px] text-emerald-300">Profile updated</span>}
             <button
               className="rounded-lg bg-violet-300 px-4 py-2.5 text-[10px] font-bold text-[#171222] hover:bg-violet-200"
               type="submit"
+              disabled={saving}
             >
-              Save profile
+              {saving ? "Saving…" : "Save profile"}
             </button>
           </div>
         </form>

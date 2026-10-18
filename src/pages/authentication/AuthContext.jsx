@@ -1,56 +1,38 @@
 ﻿import { useCallback, useContext, useMemo, useState, createContext } from "react";
-import { DEMO_CREDENTIALS } from "./credentials";
+import { clearApiSession, loginRequest, readApiUser, registerRequest, updateProfileRequest } from "../../api/auth";
+import { useEffect } from "react";
 const AuthContext = createContext(null);
-const SESSION_KEY = "zengenai-workforce-session";
-function readSession() {
-  try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY));
-  } catch {
-    return null;
-  }
-}
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(readSession);
-  const login = useCallback((email, password) => {
-    if (
-      email.trim().toLowerCase() !== DEMO_CREDENTIALS.email ||
-      password !== DEMO_CREDENTIALS.password
-    )
-      return false;
-    const next = {
-      name: DEMO_CREDENTIALS.name,
-      email: DEMO_CREDENTIALS.email,
-      initials: DEMO_CREDENTIALS.initials,
-    };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(next));
-    setUser(next);
-    return true;
+  const [user, setUser] = useState(() =>
+    localStorage.getItem("zengenai-api-access-token") ? readApiUser() : null,
+  );
+  useEffect(() => {
+    const handleExpiredSession = () => setUser(null);
+    window.addEventListener("zengenai:session-expired", handleExpiredSession);
+    return () => window.removeEventListener("zengenai:session-expired", handleExpiredSession);
   }, []);
-  const updateProfile = useCallback((changes) => {
-    setUser((previous) => {
-      const name = changes.name.trim();
-      const next = {
-        ...previous,
-        ...changes,
-        name,
-        initials: name
-          .split(/\s+/)
-          .map((part) => part[0])
-          .slice(0, 2)
-          .join("")
-          .toUpperCase(),
-      };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(next));
-      return next;
-    });
+  const login = useCallback(async (email, password) => {
+    const account = await loginRequest(email.trim(), password);
+    setUser(account);
+    return account;
+  }, []);
+  const register = useCallback(async (name, email, password) => {
+    const account = await registerRequest(name.trim(), email.trim(), password);
+    setUser(account);
+    return account;
+  }, []);
+  const updateProfile = useCallback(async (changes) => {
+    const account = await updateProfileRequest(changes.name.trim());
+    setUser(account);
+    return account;
   }, []);
   const logout = useCallback(() => {
-    localStorage.removeItem(SESSION_KEY);
+    clearApiSession();
     setUser(null);
   }, []);
   const value = useMemo(
-    () => ({ user, login, updateProfile, logout }),
-    [user, login, updateProfile, logout],
+    () => ({ user, login, register, updateProfile, logout }),
+    [user, login, register, updateProfile, logout],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

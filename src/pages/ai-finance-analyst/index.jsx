@@ -1,5 +1,8 @@
-﻿import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppLayout } from "../../components/AppLayout";
+
+import { financeApi, fromFinanceDocument, fromFinanceWorkspace, toFinanceWorkspace } from "../../api/finance";
+import { apiErrorMessage } from "../../api/client";
 import FinanceCompanionTools from "./FinanceCompanionTools";
 import { FinancePluginsPanel, FinanceQuestionsCard } from "./FinanceWorkspaceControls";
 import {
@@ -10,16 +13,16 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaClock,
+  FaDownload,
   FaFileAlt,
   FaFileInvoice,
   FaPlus,
   FaPlug,
   FaSearch,
+  FaTrash,
   FaUpload,
 } from "react-icons/fa";
 
-const PROFILE_KEY = "zengen-finance-profile";
-const DOCUMENTS_KEY = "zengen-finance-documents";
 const WORKFLOWS = [
   "Customer invoices and payments received",
   "Supplier invoices and bills to pay",
@@ -46,14 +49,6 @@ const SECTIONS = [
   { id: "Finance rules", icon: FaCheck },
 ];
 
-function readStored(key, fallback) {
-  try {
-    return JSON.parse(localStorage.getItem(key)) ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 function Metric({ label, value, note, icon: Icon, style }) {
   return (
     <article style={style} className="h-full min-w-0 rounded-2xl border border-white/[0.07] bg-[#171620] p-5">
@@ -69,7 +64,7 @@ function Metric({ label, value, note, icon: Icon, style }) {
   );
 }
 
-function Onboarding({ onComplete }) {
+function Onboarding({ onComplete, busy, notice }) {
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState({
     businessName: "",
@@ -98,7 +93,6 @@ function Onboarding({ onComplete }) {
       setStep(0);
       return;
     }
-    localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...profile, completed: true }));
     onComplete({ ...profile, completed: true });
   };
 
@@ -152,22 +146,23 @@ function Onboarding({ onComplete }) {
           <>
             <h2 className="m-0 font-display text-xl font-semibold">Bring in existing records</h2>
             <p className="mb-6 mt-2 max-w-2xl text-xs leading-5 text-[#9995a8]">
-              Add invoices, bills, or bank CSVs now, or skip this step. Files are listed in your workspace; automatic extraction and connected accounts will be enabled when the finance services are connected.
+              Upload invoices, bills, or bank exports now, or skip this step. Text-based PDFs get basic field suggestions to review; other accepted file types are stored for now.
             </p>
             <label className="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-violet-300/30 bg-violet-300/[0.035] p-6 text-center hover:bg-violet-300/[0.07]">
-              <input className="sr-only" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx,.xls" onChange={(e) => update("files", [...profile.files, ...Array.from(e.target.files || []).map((file) => file.name)])} />
+              <input className="sr-only" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx" onChange={(e) => update("files", [...profile.files, ...Array.from(e.target.files || [])])} />
               <span className="mb-3 grid h-11 w-11 place-items-center rounded-xl bg-violet-300/10 text-xl text-violet-200"><FaUpload /></span>
               <strong className="text-sm">{profile.files.length ? `${profile.files.length} file(s) selected` : "Choose files to add"}</strong>
-              <span className="mt-2 text-[11px] text-[#9995a8]">PDF, images, CSV, or Excel · multiple files supported</span>
+              <span className="mt-2 text-[11px] text-[#9995a8]">PDF, PNG, JPG, CSV, or XLSX · up to 20 MB each</span>
             </label>
-            {profile.files.length > 0 && <ul className="mt-4 space-y-1 text-xs text-[#c5c0d0]">{profile.files.map((name, index) => <li key={`${name}-${index}`}>{name}</li>)}</ul>}
+            {profile.files.length > 0 && <ul className="mt-4 space-y-1 text-xs text-[#c5c0d0]">{profile.files.map((file, index) => <li key={`${file.name}-${index}`}>{file.name}</li>)}</ul>}
           </>
         )}
         {error && <p role="alert" className="mb-0 mt-4 text-xs text-rose-300">{error}</p>}
+        {notice && <p role="status" className="mb-0 mt-4 rounded-lg border border-amber-200/15 bg-amber-200/[0.04] px-3 py-2 text-xs text-amber-100">{notice}</p>}
         <div className="mt-8 flex items-center justify-between border-t border-white/[0.07] pt-5">
           {step > 0 ? <button type="button" onClick={() => { setError(""); setStep(step - 1); }} className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-[#c5c0d0] hover:bg-white/[0.04]"><FaChevronLeft /> Back</button> : <span className="text-[10px] text-[#777285]">About 5 minutes · You can edit this later</span>}
-          <button type="button" onClick={() => { setError(""); step < 4 ? setStep(step + 1) : finish(); }} className="inline-flex items-center gap-2 rounded-lg bg-violet-300 px-5 py-3 text-xs font-bold text-[#171222] hover:bg-violet-200">
-            {step === 4 ? "Finish setup" : "Continue"} <FaChevronRight />
+          <button type="button" disabled={busy} onClick={() => { setError(""); step < 4 ? setStep(step + 1) : finish(); }} className="inline-flex items-center gap-2 rounded-lg bg-violet-300 px-5 py-3 text-xs font-bold text-[#171222] hover:bg-violet-200 disabled:opacity-50">
+            {busy ? "Saving workspace…" : step === 4 ? "Finish setup" : "Continue"} {!busy && <FaChevronRight />}
           </button>
         </div>
       </section>
@@ -213,55 +208,168 @@ function EmptyState({ title, copy, action }) {
   </div>;
 }
 
+function RecordReviewCard({ record, onConfirm, busy }) {
+  const [draft, setDraft] = useState({
+    counterparty: record.counterparty || "",
+    reference_number: record.reference_number || "",
+    total_amount: record.total_amount ?? "",
+  });
+  return (
+    <article className="rounded-xl border border-amber-200/15 bg-amber-200/[0.025] p-4">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div><p className="m-0 text-xs font-semibold text-white">Suggested invoice details</p><p className="mb-0 mt-1 text-[10px] text-[#9995a8]">Please compare these suggestions with the uploaded document.</p></div>
+        <span className="rounded-full bg-amber-200/10 px-2 py-1 text-[9px] text-amber-100">Needs review</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[["Vendor", "counterparty", "text"], ["Invoice number", "reference_number", "text"], ["Total amount", "total_amount", "number"]].map(([label, key, type]) => (
+          <label key={key} className="text-[10px] text-[#9995a8]">{label}<input type={type} step={type === "number" ? "0.01" : undefined} value={draft[key]} onChange={(event) => setDraft((current) => ({ ...current, [key]: event.target.value }))} className="mt-1 block h-9 w-full rounded-lg border border-white/10 bg-[#111018] px-3 text-xs text-white outline-none focus:border-violet-300/40" /></label>
+        ))}
+      </div>
+      {record.review_notes?.length > 0 && <p className="mb-0 mt-3 text-[10px] leading-4 text-amber-100/80">{record.review_notes.join(" ")}</p>}
+      <div className="mt-3 flex justify-end"><button disabled={busy} type="button" onClick={() => onConfirm(record.id, { counterparty: draft.counterparty || null, reference_number: draft.reference_number || null, total_amount: draft.total_amount === "" ? null : Number(draft.total_amount) })} className="rounded-lg bg-violet-300 px-3 py-2 text-[10px] font-bold text-[#171222] disabled:opacity-50">Confirm reviewed details</button></div>
+    </article>
+  );
+}
+
 export default function FinanceIndex() {
-  const [profile, setProfile] = useState(() => readStored(PROFILE_KEY, null));
+  const initialLoadStarted = useRef(false);
+  const [profile, setProfile] = useState(null);
+  const [loadingWorkspace, setLoadingWorkspace] = useState(true);
   const [section, setSection] = useState("Overview");
-  const [documents, setDocuments] = useState(() => readStored(DOCUMENTS_KEY, []));
+  const [documents, setDocuments] = useState([]);
+  const [records, setRecords] = useState([]);
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const refreshWorkspace = useCallback(async () => {
+    setLoadingWorkspace(true);
+    setLoadError("");
+    try {
+      const workspace = await financeApi.getWorkspace();
+      setProfile(fromFinanceWorkspace(workspace));
+      const [remoteDocuments, remoteRecords] = await Promise.all([financeApi.listDocuments(), financeApi.listRecords()]);
+      setDocuments(remoteDocuments.map(fromFinanceDocument));
+      setRecords(remoteRecords);
+    } catch (error) {
+      if (error.response?.status === 404) {
+        setProfile(null);
+        setDocuments([]);
+        setRecords([]);
+      } else {
+        setLoadError(apiErrorMessage(error, "Could not load your finance workspace."));
+      }
+    } finally {
+      setLoadingWorkspace(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (initialLoadStarted.current) return;
+    initialLoadStarted.current = true;
+    refreshWorkspace();
+  }, [refreshWorkspace]);
+
   const filtered = useMemo(
     () => documents.filter((item) => item.name.toLowerCase().includes(search.toLowerCase())),
     [documents, search],
   );
 
-  function addFiles(fileList) {
-    const added = Array.from(fileList || []).map((file) => ({
-      id: `${Date.now()}-${file.name}-${Math.random().toString(36).slice(2, 7)}`,
-      name: file.name,
-      added: new Date().toLocaleDateString(),
-      status: "Added to workspace",
-      kind: file.name.split(".").pop()?.toUpperCase() || "FILE",
-    }));
-    const next = [...added, ...documents];
-    setDocuments(next);
-    localStorage.setItem(DOCUMENTS_KEY, JSON.stringify(next));
-    setNotice(added.length ? `${added.length} file(s) added. They are ready for finance processing once services are connected.` : "");
-    window.setTimeout(() => setNotice(""), 6000);
+  async function uploadFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    setBusy(true);
+    let added = 0;
+    const failures = [];
+    for (const file of files) {
+      try {
+        const document = await financeApi.uploadDocument(file);
+        setDocuments((current) => [fromFinanceDocument(document), ...current.filter((item) => item.id !== document.id)]);
+        added += 1;
+        if (document.extension === ".pdf") {
+          try {
+            const result = await financeApi.processDocument(document.id);
+            setDocuments((current) => current.map((item) => item.id === document.id ? { ...item, status: result.status.replaceAll("_", " ") } : item));
+            setRecords((current) => [...result.records, ...current.filter((record) => !result.records.some((item) => item.id === record.id))]);
+          } catch (error) {
+            failures.push(`${file.name}: uploaded, but could not be processed (${apiErrorMessage(error, "processing failed")})`);
+          }
+        }
+      } catch (error) {
+        failures.push(`${file.name}: ${apiErrorMessage(error, "upload failed")}`);
+      }
+    }
+    setNotice(failures.length ? `${added} file(s) added. ${failures.join(" · ")}` : `${added} file(s) uploaded to your finance workspace.`);
+    setBusy(false);
   }
 
-  function completeOnboarding(savedProfile) {
-    setProfile(savedProfile);
-    if (savedProfile.files.length) {
-      const imported = savedProfile.files.map((name, index) => ({
-        id: `${Date.now()}-${index}-${name}`,
-        name,
-        added: new Date().toLocaleDateString(),
-        status: "Added to workspace",
-        kind: name.split(".").pop()?.toUpperCase() || "FILE",
-      }));
-      const next = [...imported, ...documents];
-      setDocuments(next);
-      localStorage.setItem(DOCUMENTS_KEY, JSON.stringify(next));
+  async function completeOnboarding(savedProfile) {
+    setBusy(true);
+    try {
+      const workspace = await financeApi.saveWorkspace(toFinanceWorkspace(savedProfile));
+      setProfile(fromFinanceWorkspace(workspace));
+      await uploadFiles(savedProfile.files);
+    } catch (error) {
+      setNotice(apiErrorMessage(error, "Could not save your finance setup."));
+    } finally {
+      setBusy(false);
     }
   }
 
+  async function deleteDocument(id) {
+    try {
+      await financeApi.deleteDocument(id);
+      setDocuments((current) => current.filter((document) => document.id !== id));
+      setRecords((current) => current.filter((record) => record.document_id !== id));
+      setNotice("Document deleted from your workspace.");
+    } catch (error) {
+      setNotice(apiErrorMessage(error, "Could not delete that document."));
+    }
+  }
+
+  async function confirmRecord(id, corrections) {
+    setBusy(true);
+    try {
+      const updated = await financeApi.confirmRecord(id, corrections);
+      setRecords((current) => current.map((record) => record.id === id ? updated : record));
+      setDocuments((current) => current.map((document) => document.id === updated.document_id ? { ...document, status: "confirmed" } : document));
+      setNotice("Finance details confirmed and saved.");
+    } catch (error) {
+      setNotice(apiErrorMessage(error, "Could not confirm this finance record."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function downloadDocument(document) {
+    try {
+      const blob = await financeApi.downloadDocument(document.id);
+      const url = URL.createObjectURL(blob);
+      const link = window.document.createElement("a");
+      link.href = url;
+      link.download = document.name;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setNotice(apiErrorMessage(error, "Could not download that document."));
+    }
+  }
+
+  if (loadingWorkspace) {
+    return <AppLayout section="My AI team" current="Finance Analyst"><div className="mx-auto max-w-3xl px-6 py-16 text-center text-sm text-[#9995a8]">Loading your finance workspace…</div></AppLayout>;
+  }
+
+  if (loadError) {
+    return <AppLayout section="My AI team" current="Finance Analyst"><div className="mx-auto max-w-3xl px-6 py-16 text-center"><p role="alert" className="text-sm text-rose-200">{loadError}</p><button type="button" onClick={refreshWorkspace} className="mt-3 rounded-lg bg-violet-300 px-4 py-2 text-xs font-bold text-[#171222]">Try again</button></div></AppLayout>;
+  }
+
   if (!profile?.completed) {
-    return <AppLayout section="My AI team" current="Finance Analyst"><Onboarding onComplete={completeOnboarding} /></AppLayout>;
+    return <AppLayout section="My AI team" current="Finance Analyst"><Onboarding onComplete={completeOnboarding} busy={busy} notice={notice} /></AppLayout>;
   }
 
   const importButton = (
     <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-violet-300 px-4 py-3 text-[11px] font-bold text-[#171222] hover:bg-violet-200">
-      <input className="sr-only" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx,.xls" onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+      <input className="sr-only" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx" disabled={busy} onChange={(e) => { uploadFiles(e.target.files); e.target.value = ""; }} />
       <FaPlus /> Import files
     </label>
   );
@@ -283,10 +391,10 @@ export default function FinanceIndex() {
         </nav>
         {section === "Overview" && <>
           <section className="mb-5 grid grid-cols-4 gap-3 max-[1000px]:grid-cols-2 max-[520px]:grid-cols-1">
-            <Metric label="Outstanding receivables" value={profile.currency + " 0.00"} note="From imported customer invoices" icon={FaArrowRight} />
-            <Metric label="Bills due soon" value={profile.currency + " 0.00"} note="Supplier bills with upcoming due dates" icon={FaClock} />
-            <Metric label="Needs your review" value={documents.length.toString()} note="Imported files awaiting processing" icon={FaCheck} />
-            <Metric label="Documents added" value={documents.length.toString()} note="This workspace · local file list" icon={FaFileInvoice} />
+            <Metric label="Finance records" value={records.length.toString()} note="Extracted from your uploaded files" icon={FaArrowRight} />
+            <Metric label="Needs your review" value={records.filter((record) => record.status === "needs_review").length.toString()} note="Suggestions awaiting your confirmation" icon={FaClock} />
+            <Metric label="Confirmed records" value={records.filter((record) => record.status === "confirmed").length.toString()} note="Reviewed and saved in your workspace" icon={FaCheck} />
+            <Metric label="Documents added" value={documents.length.toString()} note="Files saved in your finance workspace" icon={FaFileInvoice} />
           </section>
           <section className="mb-5 grid gap-4 lg:grid-cols-[1.5fr_1fr]">
             <article className="rounded-2xl border border-violet-300/20 bg-[radial-gradient(ellipse_at_top_right,rgba(167,139,250,0.12),transparent_55%),#171620] p-6">
@@ -298,13 +406,14 @@ export default function FinanceIndex() {
                 <button type="button" onClick={() => setSection("Finance rules")} className="rounded-lg border border-white/10 px-4 py-2.5 text-[10px] text-[#c5c0d0] hover:bg-white/[0.04]">Set finance rules</button>
               </div>
             </article>
-            <FinanceQuestionsCard documents={documents} onOpenDocuments={() => setSection("Documents")} />
+          <FinanceQuestionsCard documents={documents.filter((document) => document.status === "needs review" || document.status === "awaiting processing" || document.status === "ocr required")} onOpenDocuments={() => setSection("Documents")} />
           </section>
+          {records.some((record) => record.status === "needs_review") && <section className="mb-5 space-y-3"><h2 className="m-0 text-sm font-semibold">Review extracted details</h2>{records.filter((record) => record.status === "needs_review").map((record) => <RecordReviewCard key={record.id} record={record} onConfirm={confirmRecord} busy={busy} />)}</section>}
           <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-5">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="m-0 text-sm font-semibold">Recent finance activity</h2>
-                <p className="mb-0 mt-1 text-[10px] text-[#777285]">A record of work in this workspace</p>
+              <p className="mb-0 mt-1 text-[10px] text-[#777285]">Documents and finance data saved in your account</p>
               </div>
               <button type="button" onClick={() => setSection("Documents")} className="text-[10px] text-violet-200">View documents <FaArrowRight className="ml-1 inline" /></button>
             </div>
@@ -315,7 +424,7 @@ export default function FinanceIndex() {
                     <span className="grid h-9 w-9 place-items-center rounded-lg bg-violet-300/10 text-violet-200"><FaFileAlt /></span>
                     <div className="min-w-0 flex-1">
                       <p className="m-0 truncate text-xs text-white">{doc.name}</p>
-                      <p className="mb-0 mt-1 text-[10px] text-[#777285]">{doc.kind} · added {doc.added}</p>
+                      <p className="mb-0 mt-1 text-[10px] text-[#777285]">{doc.kind} · added {doc.added} · {formatFileSize(doc.sizeBytes)}</p>
                     </div>
                     <span className="text-[10px] text-[#9995a8]">{doc.status}</span>
                   </div>
@@ -329,7 +438,7 @@ export default function FinanceIndex() {
         {section === "Plugins" && <FinancePluginsPanel />}
         {section === "Documents" && <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-5">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="m-0 text-base font-semibold">Documents & imports</h2><p className="mb-0 mt-1 text-xs text-[#9995a8]">Invoices, bills, receipts, and transaction files you add.</p></div><label className="flex h-9 w-64 items-center gap-2 rounded-lg border border-white/[0.08] bg-[#111018] px-3 text-[10px] text-[#777285]"><FaSearch /><input aria-label="Search imported documents" className="min-w-0 flex-1 bg-transparent text-white outline-none" placeholder="Search files..." value={search} onChange={(e) => setSearch(e.target.value)} /></label></div>
-          {filtered.length ? <div className="divide-y divide-white/[0.06]">{filtered.map((doc) => <div key={doc.id} className="flex items-center gap-3 py-3"><span className="grid h-9 w-9 place-items-center rounded-lg bg-violet-300/10 text-violet-200"><FaFileAlt /></span><div className="min-w-0 flex-1"><p className="m-0 truncate text-xs text-white">{doc.name}</p><p className="mb-0 mt-1 text-[10px] text-[#777285]">{doc.kind} · added {doc.added}</p></div><span className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[9px] text-[#c5c0d0]">{doc.status}</span></div>)}</div> : <EmptyState title={search ? "No matching files" : "No documents yet"} copy={search ? "Try another file name." : "Add a batch of invoices, bills, receipts, or bank exports to your workspace."} action={importButton} />}
+          {filtered.length ? <div className="divide-y divide-white/[0.06]">{filtered.map((doc) => <div key={doc.id} className="flex flex-wrap items-center gap-3 py-3"><span className="grid h-9 w-9 place-items-center rounded-lg bg-violet-300/10 text-violet-200"><FaFileAlt /></span><div className="min-w-0 flex-1"><p className="m-0 truncate text-xs text-white">{doc.name}</p><p className="mb-0 mt-1 text-[10px] text-[#777285]">{doc.kind} · added {doc.added} · {formatFileSize(doc.sizeBytes)}</p></div><span className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[9px] text-[#c5c0d0]">{doc.status}</span><button type="button" onClick={() => downloadDocument(doc)} className="grid h-8 w-8 place-items-center rounded-lg text-[#c5c0d0] hover:bg-white/[0.06]" aria-label={`Download ${doc.name}`} title="Download"><FaDownload /></button><button type="button" onClick={() => deleteDocument(doc.id)} className="grid h-8 w-8 place-items-center rounded-lg text-rose-200 hover:bg-rose-400/10" aria-label={`Delete ${doc.name}`} title="Delete"><FaTrash /></button></div>)}</div> : <EmptyState title={search ? "No matching files" : "No documents yet"} copy={search ? "Try another file name." : "Add a batch of invoices, bills, receipts, or bank exports to your workspace."} action={importButton} />}
         </section>}
         {section !== "Overview" && section !== "Documents" && section !== "Plugins" && <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-6">
           <p className="mb-2 text-[9px] font-bold tracking-[0.16em] text-violet-300">FINANCE WORKSPACE</p>
@@ -342,10 +451,10 @@ export default function FinanceIndex() {
             <Rule label="Expense categories" value={profile.categories || "Not set"} />
             <Rule label="Business size" value={profile.size} />
             <Rule label="Financial year" value={profile.financialYear} />
-            <button type="button" onClick={() => { localStorage.removeItem(PROFILE_KEY); setProfile(null); }} className="mt-2 w-fit rounded-lg border border-white/10 px-4 py-2.5 text-[10px] text-[#c5c0d0] hover:bg-white/[0.04]">Edit onboarding answers</button>
+            <button type="button" onClick={() => setProfile(null)} className="mt-2 w-fit rounded-lg border border-white/10 px-4 py-2.5 text-[10px] text-[#c5c0d0] hover:bg-white/[0.04]">Edit onboarding answers</button>
           </div> : <EmptyState title={`No ${section.toLowerCase()} yet`} copy={sectionCopy(section)} action={<button type="button" onClick={() => setSection("Documents")} className="mt-4 rounded-lg border border-white/10 px-4 py-2.5 text-[10px] text-violet-200 hover:bg-white/[0.04]">Go to documents <FaArrowRight className="ml-2 inline" /></button>} />}
         </section>}
-        <p className="mb-0 mt-5 flex items-center gap-2 text-[10px] text-[#777285]"><FaCheck className="text-emerald-300" /> Setup saved in this browser · Finance data connections are not active yet</p>
+        <p className="mb-0 mt-5 flex items-center gap-2 text-[10px] text-[#777285]"><FaCheck className="text-emerald-300" /> Finance workspace and files are loaded from your signed-in account.</p>
       </div>
       <FinanceCompanionTools />
     </AppLayout>
@@ -354,6 +463,12 @@ export default function FinanceIndex() {
 
 function Rule({ label, value }) {
   return <div className="rounded-xl border border-white/[0.07] bg-[#111018] p-4"><p className="mb-1 text-[10px] text-[#777285]">{label}</p><p className="mb-0 text-xs text-white">{value}</p></div>;
+}
+
+function formatFileSize(bytes = 0) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function sectionCopy(section) {

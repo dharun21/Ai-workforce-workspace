@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { FaArrowRight, FaCheck, FaMoon, FaSun, FaUpload } from "react-icons/fa";
 import { AppLayout } from "../../components/AppLayout";
 import SpecialistIcon from "../../components/SpecialistIcon";
-import { DEMO_CREDENTIALS } from "../authentication/credentials";
+import { useAuth } from "../authentication/AuthContext";
 
 export default function SettingsPage() {
+  const { user } = useAuth();
   const [saved, setSaved] = useState(false);
   const [prefs, setPrefs] = useState(() => {
     try {
@@ -166,7 +167,7 @@ export default function SettingsPage() {
                 <div>
                   <h2 className="mb-1 font-display text-sm font-semibold">Account access</h2>
                   <p className="mb-0 text-[10px] text-[#9995a8]">
-                    Manage your demo workspace account.
+                    Manage your ZengenAI account.
                   </p>
                 </div>
               </div>
@@ -174,7 +175,7 @@ export default function SettingsPage() {
                 <span>
                   <strong className="block text-xs">Signed in as</strong>
                   <small className="mt-1 block text-[10px] text-[#9995a8]">
-                    {DEMO_CREDENTIALS.email}
+                    {user?.email}
                   </small>
                 </span>
                 <button
@@ -189,7 +190,7 @@ export default function SettingsPage() {
                 <span>
                   <strong className="block text-xs">Data storage</strong>
                   <small className="mt-1 block text-[10px] text-[#9995a8]">
-                    Preferences and demo session are stored in this browser.
+                    Finance workspace data and uploaded documents are stored by the backend.
                   </small>
                 </span>
                 <span className="rounded-full bg-emerald-300/10 px-2 py-1 text-[8px] font-bold text-emerald-200">

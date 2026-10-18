@@ -9,6 +9,7 @@ import {
 } from "react-icons/fa";
 import { useAuth } from "../AuthContext";
 import SpecialistIcon from "../../../components/SpecialistIcon";
+import { apiErrorMessage } from "../../../api/client";
 
 const loginHighlights = [
   {
@@ -35,11 +36,14 @@ const loginHighlights = [
 ];
 
 export default function LoginPage() {
-  const { user, login } = useAuth();
+  const { user, login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [highlightIndex, setHighlightIndex] = useState(0);
@@ -53,13 +57,19 @@ export default function LoginPage() {
   }, []);
   if (user) return <Navigate to={location.state?.from?.pathname || "/workspace"} replace />;
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
-    if (!login(email, password)) {
-      setError("Those details don’t match an account. Check them and try again.");
-      return;
+    setSubmitting(true);
+    setError("");
+    try {
+      if (isRegistering) await register(name, email, password);
+      else await login(email, password);
+      navigate(location.state?.from?.pathname || "/workspace", { replace: true });
+    } catch (requestError) {
+      setError(apiErrorMessage(requestError, "We couldn’t sign you in. Please try again."));
+    } finally {
+      setSubmitting(false);
     }
-    navigate(location.state?.from?.pathname || "/workspace", { replace: true });
   }
 
   return (
@@ -88,12 +98,19 @@ export default function LoginPage() {
             <span className="h-px w-4 bg-violet-300" /> WORKSPACE ACCESS
           </p>
           <h1 className="mb-2 font-display text-[30px] font-bold tracking-[-0.045em]">
-            Welcome back<span className="text-violet-300">.</span>
+            {isRegistering ? "Create your account" : "Welcome back"}<span className="text-violet-300">.</span>
           </h1>
           <p className="mb-7 text-xs text-[#9995a8]">
-            Sign in to pick up where your team left off.
+            {isRegistering ? "Set up your ZengenAI workspace access." : "Sign in to pick up where your team left off."}
           </p>
           <form className="grid gap-5" onSubmit={submit}>
+            {isRegistering && <label className="grid gap-2 text-[10px] font-medium text-[#d5d0df]">
+              Your name
+              <span className="flex h-11 items-center gap-3 rounded-lg border border-white/[0.09] bg-black/10 px-3 text-[#777285] focus-within:border-violet-300/50">
+                <FaUser className="text-[11px]" />
+                <input className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-[#625e70]" type="text" autoComplete="name" required value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" />
+              </span>
+            </label>}
             <label className="grid gap-2 text-[10px] font-medium text-[#d5d0df]">
               Email address
               <span className="flex h-11 items-center gap-3 rounded-lg border border-white/[0.09] bg-black/10 px-3 text-[#777285] focus-within:border-violet-300/50">
@@ -101,7 +118,7 @@ export default function LoginPage() {
                 <input
                   className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-[#625e70]"
                   type="email"
-                  autoComplete="username"
+                  autoComplete="email"
                   required
                   value={email}
                   onChange={(event) => {
@@ -119,7 +136,8 @@ export default function LoginPage() {
                 <input
                   className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-[#625e70]"
                   type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
+                  autoComplete={isRegistering ? "new-password" : "current-password"}
+                  minLength={isRegistering ? 12 : undefined}
                   required
                   value={password}
                   onChange={(event) => {
@@ -149,12 +167,16 @@ export default function LoginPage() {
             <button
               className="mt-1 flex h-11 items-center justify-center gap-2 rounded-lg bg-violet-300 text-[11px] font-bold text-[#171222] shadow-lg shadow-violet-400/15 transition hover:bg-violet-200"
               type="submit"
+              disabled={submitting}
             >
-              Sign in <FaArrowRight />
+              {submitting ? "Please wait…" : isRegistering ? "Create account" : "Sign in"} {!submitting && <FaArrowRight />}
             </button>
           </form>
-          <p className="mb-0 mt-6 text-center text-[9px] text-[#706b80]">
-            Sign in with your zengenAI workspace account.
+          <p className="mb-0 mt-6 text-center text-[10px] text-[#706b80]">
+            {isRegistering ? "Already have an account?" : "New to ZengenAI?"}{" "}
+            <button type="button" className="text-violet-200 hover:text-white" onClick={() => { setIsRegistering((value) => !value); setError(""); }}>
+              {isRegistering ? "Sign in" : "Create an account"}
+            </button>
           </p>
         </div>
       </section>
