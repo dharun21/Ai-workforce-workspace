@@ -3,6 +3,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  base:"/AI-Workforce-workspace/",
+  base: "/Ai-workforce-workspace/",
   plugins: [react(), tailwindcss()],
 });
