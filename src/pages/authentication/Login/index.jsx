@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   FaArrowRight,
   FaEye,
@@ -35,8 +35,8 @@ const loginHighlights = [
   },
 ];
 
-export default function LoginPage() {
-  const { user, login, register } = useAuth();
+export default function LoginPage({ adminOnly = false }) {
+  const { user, login, register, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
@@ -55,7 +55,9 @@ export default function LoginPage() {
     }, 5000);
     return () => window.clearInterval(timer);
   }, []);
-  if (user) return <Navigate to={location.state?.from?.pathname || "/workspace"} replace />;
+  if (user && (!adminOnly || user.is_admin)) {
+    return <Navigate to={adminOnly ? "/admin/users" : location.state?.from?.pathname || "/workspace"} replace />;
+  }
 
   async function submit(event) {
     event.preventDefault();
@@ -63,8 +65,15 @@ export default function LoginPage() {
     setError("");
     try {
       if (isRegistering) await register(name, email, password);
-      else await login(email, password);
-      navigate(location.state?.from?.pathname || "/workspace", { replace: true });
+      else {
+        const account = await login(email, password);
+        if (adminOnly && !account.is_admin) {
+          logout();
+          setError("This account does not have administrator access. Try an admin account.");
+          return;
+        }
+      }
+      navigate(adminOnly ? "/admin/users" : location.state?.from?.pathname || "/workspace", { replace: true });
     } catch (requestError) {
       setError(apiErrorMessage(requestError, "We couldn’t sign you in. Please try again."));
     } finally {
@@ -95,16 +104,17 @@ export default function LoginPage() {
             </span>
           </a>
           <p className="mb-3 flex items-center gap-2 text-[9px] font-bold tracking-[0.16em] text-violet-300">
-            <span className="h-px w-4 bg-violet-300" /> WORKSPACE ACCESS
+            <span className="h-px w-4 bg-violet-300" /> {adminOnly ? "ADMINISTRATOR ACCESS" : "WORKSPACE ACCESS"}
           </p>
           <h1 className="mb-2 font-display text-[30px] font-bold tracking-[-0.045em]">
-            {isRegistering ? "Create your account" : "Welcome back"}<span className="text-violet-300">.</span>
+            {adminOnly ? "Admin sign in" : isRegistering ? "Create your account" : "Welcome back"}<span className="text-violet-300">.</span>
           </h1>
           <p className="mb-7 text-xs text-[#9995a8]">
-            {isRegistering ? "Set up your ZengenAI workspace access." : "Sign in to pick up where your team left off."}
+            {adminOnly ? "Sign in with an account that has administrator access." : isRegistering ? "Set up your ZengenAI workspace access." : "Sign in to pick up where your team left off."}
           </p>
+          {!adminOnly && location.state?.notice && <p className="mb-4 rounded-lg border border-emerald-300/20 bg-emerald-300/[0.06] px-3 py-2.5 text-[10px] text-emerald-200" role="status">{location.state.notice}</p>}
           <form className="grid gap-5" onSubmit={submit}>
-            {isRegistering && <label className="grid gap-2 text-[10px] font-medium text-[#d5d0df]">
+            {!adminOnly && isRegistering && <label className="grid gap-2 text-[10px] font-medium text-[#d5d0df]">
               Your name
               <span className="flex h-11 items-center gap-3 rounded-lg border border-white/[0.09] bg-black/10 px-3 text-[#777285] focus-within:border-violet-300/50">
                 <FaUser className="text-[11px]" />
@@ -136,8 +146,8 @@ export default function LoginPage() {
                 <input
                   className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-[#625e70]"
                   type={showPassword ? "text" : "password"}
-                  autoComplete={isRegistering ? "new-password" : "current-password"}
-                  minLength={isRegistering ? 12 : undefined}
+                  autoComplete={!adminOnly && isRegistering ? "new-password" : "current-password"}
+                  minLength={!adminOnly && isRegistering ? 12 : undefined}
                   required
                   value={password}
                   onChange={(event) => {
@@ -169,15 +179,23 @@ export default function LoginPage() {
               type="submit"
               disabled={submitting}
             >
-              {submitting ? "Please wait…" : isRegistering ? "Create account" : "Sign in"} {!submitting && <FaArrowRight />}
+              {submitting ? "Please wait…" : !adminOnly && isRegistering ? "Create account" : adminOnly ? "Sign in to admin" : "Sign in"} {!submitting && <FaArrowRight />}
             </button>
           </form>
-          <p className="mb-0 mt-6 text-center text-[10px] text-[#706b80]">
-            {isRegistering ? "Already have an account?" : "New to ZengenAI?"}{" "}
-            <button type="button" className="text-violet-200 hover:text-white" onClick={() => { setIsRegistering((value) => !value); setError(""); }}>
-              {isRegistering ? "Sign in" : "Create an account"}
-            </button>
-          </p>
+          {!adminOnly ? (
+            <>
+              <p className="mb-0 mt-6 text-center text-[10px] text-[#706b80]">
+                {isRegistering ? "Already have an account?" : "New to ZengenAI?"}{" "}
+                <button type="button" className="text-violet-200 hover:text-white" onClick={() => { setIsRegistering((value) => !value); setError(""); }}>
+                  {isRegistering ? "Sign in" : "Create an account"}
+                </button>
+              </p>
+              {!isRegistering && <p className="mb-0 mt-4 text-center text-[10px] text-[#706b80]">Administrator? <Link className="text-violet-200 hover:text-white" to="/admin/login">Sign in here</Link></p>}
+              {!isRegistering && <p className="mb-0 mt-3 text-center text-[10px] text-[#706b80]"><Link className="text-violet-200 hover:text-white" to="/forgot-password">Forgot password?</Link></p>}
+            </>
+          ) : (
+            <p className="mb-0 mt-6 text-center text-[10px] text-[#706b80]">Workspace user? <Link className="text-violet-200 hover:text-white" to="/login">Go to workspace sign in</Link></p>
+          )}
         </div>
       </section>
       <aside
@@ -224,4 +242,8 @@ export default function LoginPage() {
       </aside>
     </main>
   );
+}
+
+export function AdminLoginPage() {
+  return <LoginPage adminOnly />;
 }

@@ -6,11 +6,12 @@ const iconTone = {
   blue: "bg-sky-300/10 text-sky-200",
 };
 
-export default function EmployeeCard({ employee, index = 0, onOpen }) {
-  const purchased = employee.status === "Purchased";
+export default function EmployeeCard({ employee, index = 0, onOpen, onPurchase }) {
+  const purchased = employee.status === "Purchased" || employee.status === "Enabled";
   const included = employee.status === "Included free";
   const inProgress = employee.status === "In progress";
   const available = purchased || included;
+  const purchasable = employee.status === "Not purchased";
   const statusTone = purchased
     ? "bg-emerald-400/10 text-emerald-300"
     : included
@@ -20,7 +21,9 @@ export default function EmployeeCard({ employee, index = 0, onOpen }) {
         : "bg-white/[0.04] text-[#9995a8]";
   const actionTone = available
     ? "border-violet-300/30 bg-violet-300/10 text-violet-200 hover:bg-violet-300/20"
-    : "border-white/[0.07] bg-white/[0.025] text-[#706b80]";
+    : purchasable
+      ? "border-violet-300/30 bg-violet-300 px-3 text-[#171222] hover:bg-violet-200"
+      : "border-white/[0.07] bg-white/[0.025] text-[#706b80]";
 
   return (
     <article
@@ -55,18 +58,20 @@ export default function EmployeeCard({ employee, index = 0, onOpen }) {
       <p className="mb-3 mt-2 min-h-[14px] text-[9px] text-[#706b80]">{employee.access}</p>
       <button
         className={`flex h-[38px] w-full items-center justify-center gap-2 rounded-lg border text-[10px] font-semibold transition disabled:cursor-default disabled:opacity-60 ${actionTone}`}
-        onClick={onOpen}
+        onClick={available ? onOpen : purchasable ? onPurchase : undefined}
         type="button"
-        disabled={!available}
+        disabled={!available && !purchasable}
       >
         {purchased
-          ? "Open Finance Analyst"
+          ? `Open ${employee.role.replace(/^AI /, "")}`
           : included
             ? "Open your assistant"
+          : purchasable
+            ? "Purchase"
             : inProgress
               ? "In development"
               : "Coming soon"}
-        {available && <FaArrowRight className="text-[8px]" />}
+        {(available || purchasable) && <FaArrowRight className="text-[8px]" />}
       </button>
     </article>
   );

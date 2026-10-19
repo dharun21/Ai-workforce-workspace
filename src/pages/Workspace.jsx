@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaArrowRight,
@@ -16,6 +16,8 @@ import SpecialistIcon from "../components/SpecialistIcon";
 const employees = [
   {
     role: "AI Finance Analyst",
+    accessKey: "finance_analyst",
+    planStatus: "Purchased",
     icon: <SpecialistIcon type="finance" />,
     status: "Purchased",
     access: "Your plan",
@@ -26,6 +28,8 @@ const employees = [
   },
   {
     role: "AI Personal Assistant",
+    accessKey: "personal_assistant",
+    planStatus: "Included free",
     icon: <SpecialistIcon type="assistant" />,
     status: "Included free",
     access: "Included with Finance Analyst",
@@ -36,6 +40,8 @@ const employees = [
   },
   {
     role: "AI HR Executive",
+    accessKey: "hr_executive",
+    planStatus: "Coming soon",
     icon: <SpecialistIcon type="hr" />,
     status: "Coming soon",
     access: "Available soon",
@@ -46,6 +52,8 @@ const employees = [
   },
   {
     role: "AI Sales Analyst",
+    accessKey: "sales_analyst",
+    planStatus: "Coming soon",
     icon: <SpecialistIcon type="sales" />,
     status: "Coming soon",
     access: "Available soon",
@@ -56,38 +64,58 @@ const employees = [
   },
 ];
 
-const highlights = [
+const specialistHighlights = [
   {
-    eyebrow: "INCLUDED WITH YOUR PLAN",
-    title: "A little help with everything else.",
-    description:
-      "Your Personal Assistant is included at no extra cost. Keep your day, reminders, and life admin in one calm place.",
-    action: "Meet your assistant",
-    path: "/ai/personal-assistant",
-    icon: <SpecialistIcon type="assistant" />,
-    note: "FREE FOR YOU",
-  },
-  {
-    eyebrow: "YOUR AI FINANCE ANALYST",
-    title: "More clarity in every invoice.",
-    description:
-      "Review your finance workspace, follow invoice activity, and keep the important numbers moving.",
-    action: "Open Finance Analyst",
-    path: "/ai/finance",
+    accessKey: "finance_analyst",
+    eyebrow: "AI FINANCE ANALYST",
+    title: "See the story behind your numbers.",
+    description: "Organize finance records, keep an eye on invoices, and make clearer decisions as your business grows.",
+    action: "Purchase",
+    path: "/pricing",
     icon: <SpecialistIcon type="finance" />,
-    note: "IN YOUR WORKSPACE",
+    note: "BUILT FOR YOUR BUSINESS",
   },
   {
-    eyebrow: "MEET THE ZENGENAI TEAM",
-    title: "AI teammates, built around your work.",
-    description:
-      "Explore the specialists in your workspace and see what is coming next for your team.",
-    action: "Explore the AI lineup",
-    path: "#ai-catalog",
-    icon: <SpecialistIcon type="team" />,
-    note: "2 READY FOR YOU",
+    accessKey: "personal_assistant",
+    eyebrow: "PERSONAL AI ASSISTANT",
+    title: "A little help with everything else.",
+    description: "Talk through ideas, organize your day, remember important things, and get help with everyday tasks.",
+    action: "View pricing",
+    path: "/pricing",
+    icon: <SpecialistIcon type="assistant" />,
+    note: "YOUR EVERYDAY AI",
+  },
+  {
+    accessKey: "hr_executive",
+    eyebrow: "AI HR EXECUTIVE",
+    title: "Give people operations more room.",
+    description: "A dedicated AI teammate for employee questions, HR workflows, and the everyday work that keeps teams moving.",
+    action: "Explore pricing",
+    path: "/pricing",
+    icon: <SpecialistIcon type="hr" />,
+    note: "COMING TO THE TEAM",
+  },
+  {
+    accessKey: "sales_analyst",
+    eyebrow: "AI SALES ANALYST",
+    title: "Find your next opportunity.",
+    description: "Turn sales activity and pipeline signals into clearer priorities for your next move.",
+    action: "Explore pricing",
+    path: "/pricing",
+    icon: <SpecialistIcon type="sales" />,
+    note: "COMING TO THE TEAM",
   },
 ];
+
+const allSetHighlight = {
+  eyebrow: "YOUR ZENGENAI TEAM",
+  title: "Your AI teammates, working together.",
+  description: "Your enabled specialists are ready in your workspace. Open your AI team whenever you need them.",
+  action: "Explore your AI team",
+  path: "#ai-catalog",
+  icon: <SpecialistIcon type="team" />,
+  note: "YOUR TEAM IS READY",
+};
 
 const utilityButton =
   "grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-[10px] text-violet-100 transition hover:bg-white/10";
@@ -97,29 +125,43 @@ export default function Workspace() {
   const [search, setSearch] = useState("");
   const [activeHighlight, setActiveHighlight] = useState(0);
   const navigate = useNavigate();
+  const activeSpecialists = user?.specialists || [];
+  const catalogEmployees = employees.map((employee) => {
+    if (!employee.accessKey) return employee;
+    const enabled = activeSpecialists.includes(employee.accessKey);
+    return {
+      ...employee,
+      status: enabled ? employee.planStatus === "Coming soon" ? "Enabled" : employee.planStatus : employee.planStatus === "Coming soon" ? "Coming soon" : "Not purchased",
+      access: enabled ? employee.planStatus === "Included free" ? "Included with an AI purchase" : "Enabled for your account" : employee.planStatus === "Coming soon" ? "Availability coming soon" : "Choose this AI in pricing",
+      tasks: enabled ? "Ready" : "Locked",
+    };
+  });
   const filtered = useMemo(
-    () =>
-      employees.filter((employee) =>
-        `${employee.role} ${employee.detail} ${employee.status}`
-          .toLowerCase()
-          .includes(search.toLowerCase()),
-      ),
-    [search],
+    () => catalogEmployees.filter((employee) =>
+      [employee.role, employee.detail, employee.status].join(" ").toLowerCase().includes(search.toLowerCase()),
+    ),
+    [catalogEmployees, search],
   );
-  const ownedEmployees = employees.filter(
-    (employee) => employee.status === "Purchased" || employee.status === "Included free",
+  const ownedEmployees = catalogEmployees.filter(
+    (employee) => employee.accessKey && activeSpecialists.includes(employee.accessKey),
   );
-  const highlight = highlights[activeHighlight];
+  const unownedHighlights = specialistHighlights.filter(
+    (item) => !activeSpecialists.includes(item.accessKey),
+  );
+  const visibleHighlights = unownedHighlights.length ? unownedHighlights : [allSetHighlight];
+  const selectedHighlight = activeHighlight % visibleHighlights.length;
+  const highlight = visibleHighlights[selectedHighlight];
 
   useEffect(() => {
     const interval = window.setInterval(
-      () => setActiveHighlight((current) => (current + 1) % highlights.length),
+      () => setActiveHighlight((current) => (current + 1) % visibleHighlights.length),
       6500,
     );
     return () => window.clearInterval(interval);
-  }, []);
+  }, [visibleHighlights.length]);
 
   function openHighlight() {
+    if (!highlight) return;
     if (highlight.path.startsWith("#")) {
       document.getElementById("ai-catalog")?.scrollIntoView({ behavior: "smooth" });
       return;
@@ -140,11 +182,11 @@ export default function Workspace() {
               <span className="ml-2 text-xl text-violet-200">✦</span>
             </h1>
             <p className="mb-0 mt-2 text-xs text-[#9995a8]">
-              Your AI teammates are ready. Here’s what’s included in your workspace.
+              {activeSpecialists.length ? "Your enabled AI teammates are ready. Here’s what’s in your workspace." : "Discover the AI specialists you can add to your workspace."}
             </p>
           </div>
           <span className="flex shrink-0 items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2 text-[10px] text-[#9995a8] max-[420px]:hidden">
-            <i className="h-2 w-2 rounded-full bg-violet-300" /> Finance Analyst plan
+            <i className="h-2 w-2 rounded-full bg-violet-300" /> {activeSpecialists.length ? activeSpecialists.length + " AI specialist" + (activeSpecialists.length === 1 ? "" : "s") + " enabled" : "Explore AI specialists"}
           </span>
         </header>
 
@@ -200,18 +242,18 @@ export default function Workspace() {
               type="button"
               aria-label="Previous highlight"
               onClick={() =>
-                setActiveHighlight((activeHighlight + highlights.length - 1) % highlights.length)
+                setActiveHighlight((selectedHighlight + visibleHighlights.length - 1) % visibleHighlights.length)
               }
             >
               <FaChevronLeft />
             </button>
             <div className="flex items-center gap-1.5">
-              {highlights.map((item, index) => (
+              {visibleHighlights.map((item, index) => (
                 <button
                   key={item.eyebrow}
                   aria-label={`Show highlight ${index + 1}: ${item.eyebrow}`}
-                  aria-current={activeHighlight === index ? "true" : undefined}
-                  className={`h-1.5 rounded-full transition-all ${activeHighlight === index ? "w-5 bg-violet-300" : "w-1.5 bg-violet-100/40"}`}
+                  aria-current={selectedHighlight === index ? "true" : undefined}
+                  className={`h-1.5 rounded-full transition-all ${selectedHighlight === index ? "w-5 bg-violet-300" : "w-1.5 bg-violet-100/40"}`}
                   onClick={() => setActiveHighlight(index)}
                   type="button"
                 />
@@ -221,14 +263,14 @@ export default function Workspace() {
               className={utilityButton}
               type="button"
               aria-label="Next highlight"
-              onClick={() => setActiveHighlight((activeHighlight + 1) % highlights.length)}
+              onClick={() => setActiveHighlight((selectedHighlight + 1) % visibleHighlights.length)}
             >
               <FaChevronRight />
             </button>
           </div>
         </section>
 
-        <section
+        {ownedEmployees.length > 0 && <section
           className="my-4 mb-9 flex items-center justify-between gap-6 rounded-xl border border-white/[0.07] bg-[#171620] px-6 py-5 max-[760px]:flex-col max-[760px]:items-start"
           aria-label="Your AI access overview"
         >
@@ -241,32 +283,25 @@ export default function Workspace() {
                 YOUR AI WORKSPACE
               </p>
               <h2 className="mb-1 font-display text-base font-semibold">
-                Two teammates, ready to help.
+                {ownedEmployees.length === 1 ? "Your AI specialist is ready to help." : ownedEmployees.length + " AI teammates, ready to help."}
               </h2>
               <p className="mb-0 text-[10px] text-[#9995a8]">
-                One specialist for your finances, plus your personal assistant included free.
+                Only the AI specialists enabled for your account appear in your workspace.
               </p>
             </div>
           </div>
           <div className="grid min-w-[340px] gap-2.5 max-[760px]:w-full max-[760px]:min-w-0 max-[760px]:border-t max-[760px]:border-white/[0.07] max-[760px]:pt-3">
-            <div className="grid grid-cols-[20px_1fr_auto] items-center gap-2 text-[10px]">
-              <span className="grid h-[17px] w-[17px] place-items-center rounded-full bg-emerald-400/10 text-emerald-300">
-                ✓
-              </span>
-              <span>Finance Analyst</span>
-              <b className="text-[9px] font-semibold text-emerald-300">Purchased</b>
-            </div>
-            <div className="grid grid-cols-[20px_1fr_auto] items-center gap-2 text-[10px]">
-              <span className="grid h-[17px] w-[17px] place-items-center rounded-full bg-violet-300/10 text-violet-200">
-                ✦
-              </span>
-              <span>Personal Assistant</span>
-              <b className="text-[9px] font-semibold text-violet-200">Included free</b>
-            </div>
+            {ownedEmployees.map((employee) => (
+              <div key={employee.accessKey} className="grid grid-cols-[20px_1fr_auto] items-center gap-2 text-[10px]">
+                <span className="grid h-[17px] w-[17px] place-items-center rounded-full bg-emerald-400/10 text-emerald-300">+</span>
+                <span>{employee.role.replace("AI ", "")}</span>
+                <b className="text-[9px] font-semibold text-emerald-300">Enabled</b>
+              </div>
+            ))}
           </div>
-        </section>
+        </section>}
 
-        <section className="mb-10">
+        {ownedEmployees.length > 0 && <section className="mb-10">
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
               <p className="mb-2 text-[9px] font-bold tracking-[0.16em] text-violet-300">
@@ -275,7 +310,7 @@ export default function Workspace() {
               <h2 className="m-0 font-display text-lg font-semibold tracking-tight">
                 Your AI team{" "}
                 <span className="ml-1 rounded border border-white/10 px-1.5 py-0.5 align-middle text-[8px] font-medium text-[#9995a8]">
-                  02
+                  {String(ownedEmployees.length).padStart(2, "0")}
                 </span>
               </h2>
             </div>
@@ -290,10 +325,11 @@ export default function Workspace() {
                 employee={employee}
                 index={index}
                 onOpen={() => navigate(employee.path)}
+                onPurchase={() => navigate("/pricing")}
               />
             ))}
           </div>
-        </section>
+        </section>}
 
         <section className="border-t border-white/[0.07] pt-7" id="ai-catalog">
           <div className="mb-4 flex items-end justify-between gap-4 max-[760px]:items-start max-[760px]:flex-col">
@@ -329,6 +365,7 @@ export default function Workspace() {
                 employee={employee}
                 index={index}
                 onOpen={() => navigate(employee.path)}
+                onPurchase={() => navigate("/pricing")}
               />
             ))}
             {filtered.length === 0 && (

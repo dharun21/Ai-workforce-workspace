@@ -1,4 +1,4 @@
-﻿import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaCog,
   FaDollarSign,
@@ -15,6 +15,7 @@ const activeLink = "bg-violet-300/10 font-semibold text-violet-200 hover:bg-viol
 export function AppSidebar() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const specialistCount = user?.specialists?.length || 0;
   const linkClass = ({ isActive }) => `${baseLink} ${isActive ? activeLink : ""}`;
 
   return (
@@ -43,26 +44,45 @@ export function AppSidebar() {
         <nav className="grid gap-1.5" aria-label="Main navigation">
           <NavLink end className={linkClass} to="/workspace">
             <SpecialistIcon type="team" className="h-4 w-4 shrink-0" />
-            <span className="max-[760px]:hidden">My AI team</span>
-            <span className="ml-auto rounded-md bg-violet-300/10 px-1.5 py-0.5 text-[9px] font-bold text-violet-200 max-[760px]:hidden">
-              02
-            </span>
+            <span className="max-[760px]:hidden">{specialistCount ? "My AI team" : "Explore AI team"}</span>
+            {specialistCount > 0 && <span className="ml-auto rounded-md bg-violet-300/10 px-1.5 py-0.5 text-[9px] font-bold text-violet-200 max-[760px]:hidden">
+              {String(specialistCount).padStart(2, "0")}
+            </span>}
           </NavLink>
-          <NavLink className={linkClass} to="/ai/personal-assistant">
-            <SpecialistIcon type="assistant" className="h-4 w-4 shrink-0" />
-            <span className="max-[760px]:hidden">Personal assistant</span>
-            <span className="ml-auto rounded bg-violet-300/10 px-1.5 py-0.5 text-[9px] font-bold text-violet-200 max-[760px]:hidden">
-              Free
-            </span>
-          </NavLink>
-          <NavLink className={linkClass} to="/ai/finance">
-            <SpecialistIcon type="finance" className="h-4 w-4 shrink-0" />
-            <span className="max-[760px]:hidden">Finance analyst</span>
-          </NavLink>
+          {user?.specialists?.includes("personal_assistant") && (
+            <NavLink className={linkClass} to="/ai/personal-assistant">
+              <SpecialistIcon type="assistant" className="h-4 w-4 shrink-0" />
+              <span className="max-[760px]:hidden">Personal assistant</span>
+            </NavLink>
+          )}
+          {user?.specialists?.includes("finance_analyst") && (
+            <NavLink className={linkClass} to="/ai/finance">
+              <SpecialistIcon type="finance" className="h-4 w-4 shrink-0" />
+              <span className="max-[760px]:hidden">Finance analyst</span>
+            </NavLink>
+          )}
+          {user?.specialists?.includes("hr_executive") && (
+            <NavLink className={linkClass} to="/ai/hr">
+              <SpecialistIcon type="hr" className="h-4 w-4 shrink-0" />
+              <span className="max-[760px]:hidden">HR executive</span>
+            </NavLink>
+          )}
+          {user?.specialists?.includes("sales_analyst") && (
+            <NavLink className={linkClass} to="/ai/sales">
+              <SpecialistIcon type="sales" className="h-4 w-4 shrink-0" />
+              <span className="max-[760px]:hidden">Sales analyst</span>
+            </NavLink>
+          )}
         </nav>
         <p className="mb-3 mt-9 px-3 text-[9px] font-bold tracking-[0.18em] text-[#706b80] max-[760px]:hidden">
           PREFERENCES
         </p>
+        {user?.is_admin && (
+          <NavLink className={linkClass} to="/admin/users">
+            <FaUserCircle className="shrink-0 text-base" />
+            <span className="max-[760px]:hidden">Admin access</span>
+          </NavLink>
+        )}
         <NavLink className={linkClass} to="/settings">
           <FaCog className="shrink-0 text-base" />
           <span className="max-[760px]:hidden">Settings</span>

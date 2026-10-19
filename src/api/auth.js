@@ -35,6 +35,19 @@ export const loginRequest = (email, password) => authenticate("login", { email, 
 export const registerRequest = (name, email, password) =>
   authenticate("register", { name, email, password });
 
+export const requestPasswordReset = (email) =>
+  apiClient.post("/auth/forgot-password", { email }).then(({ data }) => data);
+
+export const confirmPasswordReset = (payload) =>
+  apiClient.post("/auth/reset-password", payload).then(({ data }) => data);
+
+export async function getCurrentUserRequest() {
+  const { data } = await apiClient.get("/auth/me");
+  const user = withInitials(data);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  return user;
+}
+
 export async function updateProfileRequest(name) {
   const { data } = await apiClient.patch("/auth/me", { name });
   const user = withInitials(data);
