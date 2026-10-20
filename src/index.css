@@ -64,6 +64,14 @@
   scrollbar-color: #66538d #111018;
 }
 
+/* Workspace pages have one scrollable content pane inside the app shell. */
+html:has(.app-layout-shell),
+body:has(.app-layout-shell),
+#root:has(.app-layout-shell) {
+  height: 100%;
+  overflow: hidden;
+}
+
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;

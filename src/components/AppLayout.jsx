@@ -125,12 +125,12 @@ export function AppSidebar() {
   );
 }
 
-export function AppLayout({ children, section = "Workspace", current = "My AI team" }) {
+export function AppLayout({ children, section = "Workspace", current = "My AI team", contentClassName }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   return (
-    <main className="flex h-screen min-h-0 overflow-hidden bg-[#0c0b12] text-[#f5f3ff]">
+    <main className="app-layout-shell flex h-dvh min-h-0 overflow-hidden bg-[#0c0b12] text-[#f5f3ff]">
       <AppSidebar />
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="z-10 flex h-[70px] shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#0f0e16]/95 px-8 backdrop-blur max-[760px]:px-4">
@@ -151,7 +151,7 @@ export function AppLayout({ children, section = "Workspace", current = "My AI te
             </button>
           </div>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div className={contentClassName || "min-h-0 flex-1 overflow-y-auto"}>{children}</div>
       </section>
     </main>
   );

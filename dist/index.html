@@ -4,19 +4,52 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0c0b12" />
+    <link id="zengenai-favicon" rel="icon" type="image/svg+xml" href="/Ai-workforce-workspace/zengenai-favicon.svg?v=great-vibes-3" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (async () => {
+        try {
+          await document.fonts.load('56px "Great Vibes"');
+          const canvas = document.createElement("canvas");
+          canvas.width = 64;
+          canvas.height = 64;
+          const context = canvas.getContext("2d");
+          context.textAlign = "left";
+          context.textBaseline = "alphabetic";
+          context.font = '56px "Great Vibes", cursive';
+          const glyph = context.measureText("Z");
+          const padding = 5;
+          const glyphWidth = glyph.actualBoundingBoxLeft + glyph.actualBoundingBoxRight;
+          const glyphHeight = glyph.actualBoundingBoxAscent + glyph.actualBoundingBoxDescent;
+          const scale = Math.min(1, (64 - padding * 2) / glyphWidth, (64 - padding * 2) / glyphHeight);
+          const left = (64 - glyphWidth * scale) / 2;
+          const baseline = (64 - glyphHeight * scale) / 2 + glyph.actualBoundingBoxAscent * scale;
+          context.translate(left, baseline);
+          context.scale(scale, scale);
+          context.shadowColor = "rgba(190, 165, 255, 0.4)";
+          context.shadowBlur = 2;
+          context.fillStyle = "#f5f0ff";
+          context.fillText("Z", glyph.actualBoundingBoxLeft, 0);
+          const favicon = document.getElementById("zengenai-favicon");
+          favicon.type = "image/png";
+          favicon.href = canvas.toDataURL("image/png");
+        } catch {
+          // Keep the SVG fallback if the browser cannot load the brand font.
+        }
+      })();
+    </script>
     <meta
       name="description"
       content="Manage your AI workforce and finance operations in one thoughtful workspace."
     />
     <title>ZengenAI Workforce | AI workspace</title>
-    <script type="module" crossorigin src="/AI-Workforce-workspace/assets/index-CHCsQkSe.js"></script>
-    <link rel="stylesheet" crossorigin href="/AI-Workforce-workspace/assets/index-9LJHadVk.css">
+    <script type="module" crossorigin src="/Ai-workforce-workspace/assets/index-dQzshxZa.js"></script>
+    <link rel="stylesheet" crossorigin href="/Ai-workforce-workspace/assets/index-e60Nynyk.css">
   </head>
   <body>
     <div id="root"></div>

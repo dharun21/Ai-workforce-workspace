@@ -1,10 +1,20 @@
 import { apiClient } from "./client";
 
+let documentsRequest = null;
+
 export const financeApi = {
   getWorkspace: async () => (await apiClient.get("/finance/workspace")).data,
   saveWorkspace: async (workspace) => (await apiClient.put("/finance/workspace", workspace)).data,
-  listDocuments: async () => (await apiClient.get("/finance/documents")).data,
+  listDocuments: () => {
+    if (!documentsRequest) {
+      documentsRequest = apiClient.get("/finance/documents")
+        .then((response) => response.data)
+        .finally(() => { documentsRequest = null; });
+    }
+    return documentsRequest;
+  },
   listRecords: async () => (await apiClient.get("/finance/records")).data,
+  listStatements: async () => (await apiClient.get("/finance/statements")).data,
   uploadDocument: async (file) => {
     const body = new FormData();
     body.append("file", file);
@@ -17,6 +27,12 @@ export const financeApi = {
   getRecord: async (id) => (await apiClient.get(`/finance/records/${id}`)).data,
   confirmRecord: async (id, corrections) =>
     (await apiClient.patch(`/finance/records/${id}/confirm`, corrections)).data,
+  updatePayment: async (id, payment_status) =>
+    (await apiClient.patch(`/finance/records/${id}/payment`, { payment_status })).data,
+  updateReminder: async (id, reminder_date) =>
+    (await apiClient.patch(`/finance/records/${id}/reminder`, { reminder_date })).data,
+  markRecordUnsupported: async (id) =>
+    (await apiClient.patch(`/finance/records/${id}/mark-unsupported`)).data,
 };
 
 export function toFinanceWorkspace(profile) {

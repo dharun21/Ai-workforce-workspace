@@ -23,7 +23,18 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // `eslint-plugin-react` is not installed, so core `no-unused-vars` cannot see
+      // JSX usage of a component (e.g. `icon: Icon` rendered as `<Icon />`).
+      // Capitalised identifiers are therefore ignored, matching the existing
+      // `varsIgnorePattern` convention. Unused catch bindings are allowed too.
+      'no-unused-vars': [
+        'error',
+        {
+          varsIgnorePattern: '^[A-Z_]',
+          argsIgnorePattern: '^[A-Z_]',
+          caughtErrors: 'none',
+        },
+      ],
     },
   },
 ])
