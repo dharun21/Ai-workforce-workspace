@@ -1,9 +1,9 @@
-﻿@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "DM Sans", sans-serif;
-  --font-display: "Manrope", sans-serif;
+  --font-sans: "DM Sans", "Noto Sans Tamil", "Noto Sans Devanagari", sans-serif;
+  --font-display: "Manrope", "Noto Sans Tamil", "Noto Sans Devanagari", sans-serif;
   --animate-feature-ring-wave: feature-ring-wave 5.4s ease-in-out infinite;
 }
 
@@ -21,7 +21,7 @@
 
 @layer base {
   :root {
-    font-family: "DM Sans", sans-serif;
+    font-family: "DM Sans", "Noto Sans Tamil", "Noto Sans Devanagari", sans-serif;
     color: #f5f3ff;
     background: #0c0b12;
     font-size: 14px;

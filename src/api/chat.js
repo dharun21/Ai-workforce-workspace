@@ -14,11 +14,13 @@ function getOnce(key, url) {
 
 export const chatApi = {
   listConversations: () => getOnce("conversations", "/chat/conversations"),
-  createConversation: async (title) =>
-    (await apiClient.post("/chat/conversations", { title })).data,
+  createConversation: async (title, domain = "general") =>
+    (await apiClient.post("/chat/conversations", { title, domain })).data,
   getMessages: (conversationId) =>
     getOnce(`messages:${conversationId}`, `/chat/conversations/${conversationId}/messages`),
-  sendMessage: async (payload) => (await apiClient.post("/chat/send", payload)).data,
+  sendMessage: async (payload) => (await apiClient.post("/chat/send", {
+    ...payload,
+  }, { timeout: 150000 })).data,
   deleteConversation: async (conversationId) =>
     (await apiClient.delete(`/chat/conversations/${conversationId}`)).data,
 };

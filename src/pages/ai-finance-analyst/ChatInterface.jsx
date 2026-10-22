@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { FaComments, FaPaperPlane, FaPlus, FaTrash } from "react-icons/fa";
 import { apiErrorMessage } from "../../api/client";
 import { chatApi } from "../../api/chat";
+import { useAuth } from "../authentication/AuthContext";
 
 function cleanDisplayText(value) {
   return String(value ?? "")
@@ -12,9 +13,22 @@ function cleanDisplayText(value) {
     .replaceAll("â€”", "-");
 }
 
+const FOCUS_LABELS = {
+  general: "General",
+  finance_analyst: "Finance Analyst",
+  personal_assistant: "Personal Assistant",
+  hr_executive: "HR Executive",
+  sales_analyst: "Sales Analyst",
+};
+
+const FOCUS_SPECIALISTS = ["finance_analyst", "personal_assistant", "hr_executive", "sales_analyst"];
+
 export default function ChatInterface({ onProfileComplete }) {
+  const { user } = useAuth();
+  const availableFocuses = ["general", ...(user?.specialists || []).filter((key) => FOCUS_SPECIALISTS.includes(key))];
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
+  const [focus, setFocus] = useState("general");
   const [messages, setMessages] = useState([]);
   const [visibleSuggestionMessageId, setVisibleSuggestionMessageId] = useState(null);
   const [input, setInput] = useState("");
@@ -68,14 +82,33 @@ export default function ChatInterface({ onProfileComplete }) {
   const createConversation = async () => {
     setError("");
     try {
-      const conversation = await chatApi.createConversation("New finance chat");
+      const conversation = await chatApi.createConversation("New conversation", focus);
       setConversations((prev) => [conversation, ...prev]);
       setMessages([]);
       setVisibleSuggestionMessageId(null);
+      setFocus(conversation.domain || focus);
       setActiveConversationId(conversation.id);
     } catch (err) {
       setError(apiErrorMessage(err, "Could not create a conversation."));
     }
+  };
+
+  const changeFocus = (nextFocus) => {
+    if (nextFocus === focus || sending) return;
+    setFocus(nextFocus);
+    setActiveConversationId(null);
+    setMessages([]);
+    setVisibleSuggestionMessageId(null);
+    setInput("");
+    setError("");
+  };
+
+  const openConversation = (conversation) => {
+    if (sending) return;
+    setError("");
+    setFocus(availableFocuses.includes(conversation.domain) ? conversation.domain : "general");
+    setVisibleSuggestionMessageId(null);
+    setActiveConversationId(conversation.id);
   };
 
   const sendMessage = async (event, override = {}) => {
@@ -92,6 +125,7 @@ export default function ChatInterface({ onProfileComplete }) {
       const result = await chatApi.sendMessage({
         conversation_id: activeConversationId,
         message,
+        domain: focus,
         ...(override.attachDocumentId ? { attach_document_id: override.attachDocumentId } : {}),
       });
       const nextMessages = [
@@ -162,13 +196,13 @@ export default function ChatInterface({ onProfileComplete }) {
     <div className="flex h-full min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#12111a] text-white">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-white/[0.07] bg-[#171620] p-3 md:flex">
         <div className="border-b border-white/[0.07] p-2">
-          <h2 className="m-0 text-sm font-semibold">Finance conversations</h2>
+          <h2 className="m-0 text-sm font-semibold">Chat history</h2>
           <button type="button" disabled={sending} onClick={createConversation} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-violet-300 px-3 py-2 text-xs font-semibold text-[#171222] disabled:opacity-50"><FaPlus /> New chat</button>
         </div>
         <div className="min-h-0 flex-1 space-y-1 overflow-y-auto py-3">
           {conversations.map((conversation) => (
             <div key={conversation.id} className={`flex items-center gap-1 rounded-lg px-2 ${activeConversationId === conversation.id ? "bg-violet-300/10 text-violet-100" : "text-[#aaa5b8] hover:bg-white/[0.04]"}`}>
-              <button type="button" disabled={sending} onClick={() => { setError(""); setActiveConversationId(conversation.id); }} className="min-w-0 flex-1 truncate py-2 text-left text-xs disabled:opacity-50">{conversation.title}</button>
+              <button type="button" disabled={sending} onClick={() => openConversation(conversation)} className="min-w-0 flex-1 truncate py-2 text-left text-xs disabled:opacity-50"><span className="block truncate">{conversation.title}</span><span className="mt-1 block text-[9px] text-[#777285]">{FOCUS_LABELS[conversation.domain] || "General"}</span></button>
               <button type="button" disabled={sending} onClick={() => deleteConversation(conversation.id)} className="grid h-7 w-7 shrink-0 place-items-center rounded text-[#777285] hover:text-rose-300 disabled:opacity-40" aria-label={`Delete ${conversation.title}`}><FaTrash size={10} /></button>
             </div>
           ))}
@@ -177,9 +211,14 @@ export default function ChatInterface({ onProfileComplete }) {
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
-          <div><p className="m-0 flex items-center gap-2 text-sm font-semibold"><FaComments className="text-violet-200" /> {activeConversation?.title || "New finance chat"}</p><p className={`mb-0 mt-1 text-[10px] ${latestModelStatus === "available" ? "text-emerald-200/80" : "text-[#898496]"}`}>{modelStatusLabel} | calculations use your confirmed finance records</p></div>
+          <div><p className="m-0 flex items-center gap-2 text-sm font-semibold"><FaComments className="text-violet-200" /> {activeConversation?.title || "New conversation"}</p><p className={`mb-0 mt-1 text-[10px] ${latestModelStatus === "available" ? "text-emerald-200/80" : "text-[#898496]"}`}>{modelStatusLabel}</p></div>
           <button type="button" onClick={onProfileComplete} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] text-[#c5c0d0] hover:bg-white/[0.04]">Business profile</button>
         </header>
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/[0.07] px-5 py-3">
+          <span className="mr-1 text-[10px] text-[#898496]">Focus</span>
+          {availableFocuses.map((option) => <button key={option} type="button" disabled={sending} onClick={() => changeFocus(option)} aria-pressed={focus === option} className={`rounded-full border px-3 py-1.5 text-[10px] transition disabled:opacity-50 ${focus === option ? "border-violet-300/40 bg-violet-300/10 text-violet-100" : "border-white/10 text-[#9995a8] hover:border-white/20 hover:text-white"}`}>{FOCUS_LABELS[option]}</button>)}
+          <span className="ml-auto text-[9px] text-[#777285]">Changing focus starts a new chat</span>
+        </div>
         {initialLoading && <p className="px-5 py-3 text-xs text-[#898496]">Loading your conversations...</p>}
         {error && <p role="alert" className="mx-4 mt-3 rounded-lg border border-rose-300/20 bg-rose-300/[0.06] px-3 py-2 text-xs text-rose-200">{error}</p>}
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
@@ -193,6 +232,7 @@ export default function ChatInterface({ onProfileComplete }) {
               {cleanDisplayText(message.content)}{message.pending && <span className="mt-1 block text-[10px] opacity-60">Sending...</span>}
               {message.role === "assistant" && message.metadata?.supporting_figures?.length > 0 && <div className="mt-3 border-t border-white/10 pt-2 text-[10px] text-[#aaa5b8]"><strong>Based on:</strong> {message.metadata.supporting_figures.map((item) => `${item.label}: ${item.value}`).join(" | ")}</div>}
               {message.role === "assistant" && message.metadata?.supporting_documents?.length > 0 && <div className="mt-2 text-[10px] text-[#aaa5b8]"><strong>Documents:</strong> {message.metadata.supporting_documents.map((item) => item.original_name).join(" | ")}</div>}
+              {message.role === "assistant" && message.metadata?.sources?.filter((source) => source?.title && /^https:\/\//i.test(source.url || "")).length > 0 && <div className="mt-3 border-t border-white/10 pt-2"><p className="mb-1 mt-0 text-[10px] font-semibold text-[#aaa5b8]">Sources</p><div className="flex flex-wrap gap-2">{message.metadata.sources.filter((source) => source?.title && /^https:\/\//i.test(source.url || "")).map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-1 rounded-full border border-violet-300/15 bg-violet-300/[0.04] px-2.5 py-1.5 text-[10px] text-violet-200 hover:border-violet-300/40"><span className="truncate">{cleanDisplayText(source.title)}</span><span aria-hidden="true">↗</span></a>)}</div></div>}
               {message.role === "assistant" && message.metadata?.assumptions?.map((item) => <p key={item} className="mb-0 mt-2 text-[10px] text-[#898496]">{item}</p>)}
             </article>
             {message.role === "assistant" && <div className="mt-2 space-y-2">
