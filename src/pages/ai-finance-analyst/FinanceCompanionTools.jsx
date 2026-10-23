@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { chatApi } from "../../api/chat";
 import { apiErrorMessage } from "../../api/client";
+import ChatAnswerEvidence from "./ChatAnswerEvidence";
 import {
   FaChevronDown,
   FaChevronRight,
@@ -69,7 +70,7 @@ export default function FinanceCompanionTools() {
     setLoading(true);
     setError(null);
     try {
-      const convs = await chatApi.listConversations();
+      const convs = (await chatApi.listConversations()).filter((chat) => chat.domain === "finance_analyst");
       const localChats = readStored(CHAT_KEY, []).map((chat) => ({ ...chat, legacy: true }));
       setChats([...convs, ...localChats]);
       if (convs.length > 0 && !activeChatIdRef.current) {
@@ -116,7 +117,7 @@ export default function FinanceCompanionTools() {
     setLoading(true);
     setError(null);
     try {
-      const conv = await chatApi.createConversation("New finance chat");
+      const conv = await chatApi.createConversation("New finance chat", "finance_analyst");
       setChats((prev) => [conv, ...prev]);
       activeChatIdRef.current = conv.id;
       setActiveChatId(conv.id);
@@ -140,7 +141,7 @@ export default function FinanceCompanionTools() {
     let conversationId = activeChat?.legacy ? null : activeChatId;
     if (!conversationId) {
       try {
-        const conversation = await chatApi.createConversation(text.slice(0, 42) || "New finance chat");
+        const conversation = await chatApi.createConversation(text.slice(0, 42) || "New finance chat", "finance_analyst");
         conversationId = conversation.id;
         activeChatIdRef.current = conversationId;
         setActiveChatId(conversationId);
@@ -160,6 +161,7 @@ export default function FinanceCompanionTools() {
       const result = await chatApi.sendMessage({
         conversation_id: conversationId,
         message: text,
+        domain: "finance_analyst",
         ...(override.attachDocumentId ? { attach_document_id: override.attachDocumentId } : {}),
       });
       setFollowUps(result.needs_more_info ? result.follow_up_questions || [] : []);
@@ -228,7 +230,7 @@ export default function FinanceCompanionTools() {
           {error && tab === "Chat" && <p role="alert" className="mx-4 mt-3 rounded-lg border border-rose-300/20 bg-rose-300/[0.06] px-3 py-2 text-[10px] text-rose-200">{error}</p>}
           {tab === "Chat" && <>
             <div className="flex-1 space-y-3 overflow-y-auto p-5 max-[600px]:p-3">
-              {!activeChat?.messages?.length ? <div className="mx-auto mt-8 max-w-md text-center"><span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-violet-300/10 text-violet-200"><FaComments /></span><h3 className="m-0 text-base font-semibold">What would you like to understand?</h3><p className="mb-5 mt-2 text-xs leading-5 text-[#9995a8]">Ask about cash flow, invoices, bills, spending, or finance operations. Previous conversations stay in Recent chats.</p><div className="grid gap-2 text-left">{["What should I review in my finances each week?", "How can I prepare for a cash flow review?", "Help me plan a simple expense policy"].map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt)} className="rounded-lg border border-white/[0.08] px-3 py-2.5 text-[10px] text-[#c5c0d0] hover:border-violet-300/30 hover:text-white">{prompt}<FaChevronRight className="float-right mt-0.5 text-[#777285]" /></button>)}</div></div> : activeChat.messages.map((message, index) => <div key={`${message.at}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}><div className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-5 ${message.role === "user" ? "bg-violet-300 text-[#171222]" : "border border-white/[0.07] bg-[#1a1923] text-[#d3cfdd]"}`}><p className="m-0">{message.text}</p>{message.pending && <span className="mt-2 block text-[9px] opacity-60">Sending…</span>}</div></div>)}
+              {!activeChat?.messages?.length ? <div className="mx-auto mt-8 max-w-md text-center"><span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-violet-300/10 text-violet-200"><FaComments /></span><h3 className="m-0 text-base font-semibold">What would you like to understand?</h3><p className="mb-5 mt-2 text-xs leading-5 text-[#9995a8]">Ask about confirmed invoices and bills, finance concepts, or calculations using numbers you provide. Invoice and bill totals are not bank cash or final profit.</p><div className="grid gap-2 text-left">{["Which confirmed customer invoices are overdue?", "Show my partially paid invoices", "What if all unpaid invoices are paid next month?"].map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt)} className="rounded-lg border border-white/[0.08] px-3 py-2.5 text-[10px] text-[#c5c0d0] hover:border-violet-300/30 hover:text-white">{prompt}<FaChevronRight className="float-right mt-0.5 text-[#777285]" /></button>)}</div></div> : activeChat.messages.map((message, index) => <div key={`${message.at}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}><div className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-5 ${message.role === "user" ? "bg-violet-300 text-[#171222]" : "border border-white/[0.07] bg-[#1a1923] text-[#d3cfdd]"}`}><p className="m-0 whitespace-pre-wrap">{message.text}</p>{message.role === "assistant" && <ChatAnswerEvidence metadata={message.metadata} />}{message.pending && <span className="mt-2 block text-[9px] opacity-60">Sending…</span>}</div></div>)}
             </div>
             {followUps.length > 0 && <div className="border-t border-white/[0.07] px-4 py-3"><div className="space-y-3">{followUps.map((question) => <div key={question.id}><p className="mb-2 text-[10px] font-medium text-violet-100">{question.question}</p><div className="flex flex-wrap gap-2">{question.choices?.map((choice) => <button key={choice.document_id || choice.value} type="button" disabled={loading} onClick={() => sendMessage(null, choice.document_id ? { message: question.original_question, attachDocumentId: choice.document_id } : { message: choice.value })} className="rounded-full border border-violet-300/20 bg-violet-300/[0.06] px-3 py-1.5 text-[9px] text-violet-100 hover:border-violet-300/50 disabled:opacity-50">{choice.label}</button>)}</div></div>)}</div></div>}
             <form onSubmit={sendMessage} className="border-t border-white/[0.07] p-4 max-[600px]:p-3">
@@ -237,7 +239,7 @@ export default function FinanceCompanionTools() {
                 <textarea rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Ask about your finance work…" className="max-h-28 min-h-10 flex-1 resize-y bg-transparent px-2 py-2 text-xs text-white outline-none placeholder:text-[#777285]" disabled={loading} />
                 <button type="submit" disabled={!draft.trim() || loading} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-violet-300 text-[#171222] disabled:opacity-40" aria-label="Send message"><FaPaperPlane /></button>
               </div>
-              <p className="mb-0 mt-2 text-[9px] text-[#777285]">Finance documents are searched automatically when your question needs them.</p>
+              <p className="mb-0 mt-2 text-[9px] text-[#777285]">Answers use confirmed finance records when available. Readable documents may be searched; scanned PDFs need OCR.</p>
             </form>
           </>}
           {tab === "Questions" && <div className="flex-1 overflow-y-auto p-5 max-[600px]:p-3">

@@ -86,11 +86,23 @@ function LanguageSwitcher({ language, onChange }) {
     <div aria-label="Choose website language" className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-white/10 bg-[#15131c]/90 p-1 shadow-lg shadow-black/20" role="group">
       {keys.map(({ code, label, name }) => (
         <button aria-label={name} aria-pressed={language === code} className={`grid h-8 w-8 place-items-center rounded-full font-display text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-200 ${language === code ? "bg-violet-300 text-[#171222] shadow-md shadow-violet-300/20" : "text-[#b8b1c7] hover:bg-white/[0.07] hover:text-white"}`} key={code} onClick={() => onChange(code)} type="button" title={name}>
-          {label}
+          <span className={code === "ta" ? "tamil-script" : undefined} lang={code === "ta" ? "ta" : undefined}>{label}</span>
         </button>
       ))}
     </div>
   );
+}
+
+function applyTamilTypeface(value) {
+  if (typeof value === "string") {
+    return value.split(/([\u0b80-\u0bff]+)/u).map((part, index) => (
+      /^[\u0b80-\u0bff]+$/u.test(part)
+        ? <span className="tamil-script" key={`${part}-${index}`} lang="ta">{part}</span>
+        : part
+    ));
+  }
+  if (Array.isArray(value)) return value.map(applyTamilTypeface);
+  return value;
 }
 
 function Wordmark() {
@@ -217,7 +229,8 @@ function WorkspacePreview({ copy }) {
 export default function LandingPage() {
   const { user } = useAuth();
   const [language, setLanguage] = useState(() => localStorage.getItem("zengenai-landing-language") || "en");
-  const copy = landingCopy[language] || landingCopy.en;
+  const rawCopy = landingCopy[language] || landingCopy.en;
+  const copy = language === "ta" ? applyTamilTypeface(rawCopy) : rawCopy;
   const changeLanguage = (nextLanguage) => {
     setLanguage(nextLanguage);
     localStorage.setItem("zengenai-landing-language", nextLanguage);

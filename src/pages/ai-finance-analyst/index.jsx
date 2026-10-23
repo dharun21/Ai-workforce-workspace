@@ -6,6 +6,8 @@ import ChatInterface from "./ChatInterface";
 import { financeApi, fromFinanceDocument, fromFinanceWorkspace, toFinanceWorkspace } from "../../api/finance";
 import { apiErrorMessage } from "../../api/client";
 import FinanceCompanionTools from "./FinanceCompanionTools";
+import FinanceInsights from "./FinanceInsights";
+import PayrollPanel from "./PayrollPanel";
 import { FinancePluginsPanel } from "./FinanceWorkspaceControls";
 import {
   FaArrowRight,
@@ -51,6 +53,7 @@ const SECTIONS = [
   { id: "Documents", icon: FaFileAlt },
   { id: "Receivables", icon: FaArrowRight },
   { id: "Bills", icon: FaFileInvoice },
+  { id: "Payroll", icon: FaMoneyBillWave },
   { id: "Statements", icon: FaBalanceScale },
   { id: "Insights", icon: FaChartLine },
   { id: "Reports", icon: FaFileAlt },
@@ -78,6 +81,34 @@ function Metric({ label, value, note, icon: Icon, style }) {
   );
 }
 
+function focusMoney(rows, currency) {
+  return rows?.length ? rows.map((row) => formatMoney(row.amount, row.currency)).join(" · ") : formatMoney(0, currency);
+}
+
+function BusinessFocus({ focus, currency, onSection }) {
+  if (!focus || focus.business_type === "general") return null;
+  const retail = focus.business_type === "retail";
+  const scope = retail ? "invoices" : "bills";
+  const counterparties = retail ? focus.concentration?.customers : focus.concentration?.suppliers;
+  const aged = focus.aging?.[scope] || [];
+  const metrics = retail ? [
+    ["Open customer balances", focus.balances?.invoices, "Receivables"],
+    ["Overdue collections", focus.balances?.overdue_invoices, "Receivables"],
+    ["Supplier bills due in 7 days", focus.balances?.due_soon_bills, "Bills"],
+  ] : [
+    ["Open supplier obligations", focus.balances?.bills, "Bills"],
+    ["Overdue supplier bills", focus.balances?.overdue_bills, "Bills"],
+    ["Customer balances due in 7 days", focus.balances?.due_soon_invoices, "Receivables"],
+  ];
+  return <section className="mb-5 space-y-4" aria-label={`${retail ? "Retail" : "Corporate"} finance focus`}>
+    <div className="rounded-2xl border border-violet-300/20 bg-violet-300/[0.05] p-5"><p className="mb-1 text-[9px] font-bold tracking-[0.16em] text-violet-200">{retail ? "RETAIL VIEW" : "CORPORATE VIEW"} · {focus.as_of}</p><h2 className="m-0 text-base font-semibold text-white">{retail ? "Collections and store finance" : "Obligations and counterparty exposure"}</h2><p className="mb-0 mt-2 text-[11px] leading-5 text-[#aaa5b9]">{retail ? "Start with customer balances and bills. Product margins need inventory and POS records." : "Start with payables and due dates. Group profit and budgets need entity and ledger records."}</p></div>
+    <div className="grid gap-3 md:grid-cols-3">{metrics.map(([label, rows, destination]) => <button key={label} type="button" onClick={() => onSection(destination)} className="rounded-xl border border-white/[0.07] bg-[#171620] p-4 text-left hover:border-violet-300/30"><span className="text-[10px] text-[#aaa5b9]">{label}</span><strong className="mt-3 block text-base text-white">{focusMoney(rows, currency)}</strong><span className="mt-1 block text-[9px] text-[#777285]">{(rows || []).reduce((sum, row) => sum + row.count, 0)} confirmed open record(s) · by currency</span></button>)}</div>
+    <div className="grid gap-4 lg:grid-cols-2"><article className="rounded-2xl border border-white/[0.07] bg-[#171620] p-5"><h3 className="m-0 text-sm font-semibold text-white">{retail ? "Customer invoice aging" : "Supplier bill aging"}</h3><p className="mb-4 mt-1 text-[10px] text-[#777285]">Remaining balances by saved due date</p>{aged.length ? <div className="space-y-2">{aged.map((row) => <div key={`${row.currency}-${row.bucket}`} className="flex items-center justify-between gap-3 border-b border-white/[0.05] py-2 text-[11px]"><span className="text-[#aaa5b9]">{row.label} <small>({row.count})</small></span><strong className="text-white">{formatMoney(row.amount, row.currency)}</strong></div>)}</div> : <p className="m-0 text-xs text-[#9995a8]">No confirmed open {retail ? "customer invoices" : "supplier bills"} yet.</p>}</article><article className="rounded-2xl border border-white/[0.07] bg-[#171620] p-5"><h3 className="m-0 text-sm font-semibold text-white">{retail ? "Largest customer balances" : "Largest supplier balances"}</h3><p className="mb-4 mt-1 text-[10px] text-[#777285]">Share of identified open balances within each currency</p>{counterparties?.length ? <div className="space-y-2">{counterparties.map((row) => <div key={`${row.currency}-${row.name}`} className="flex items-center justify-between gap-3 border-b border-white/[0.05] py-2 text-[11px]"><span className="min-w-0 truncate text-[#aaa5b9]">{row.name} · {row.share_percent}%</span><strong className="shrink-0 text-white">{formatMoney(row.amount, row.currency)}</strong></div>)}</div> : <p className="m-0 text-xs text-[#9995a8]">Identified {retail ? "customers" : "suppliers"} with open balances will appear here.</p>}{focus.missing_counterparty_counts?.[scope] > 0 && <p className="mb-0 mt-3 text-[10px] text-amber-100">{focus.missing_counterparty_counts[scope]} record(s) without a name are excluded from shares.</p>}</article></div>
+    <div><h3 className="mb-3 text-sm font-semibold text-white">What would complete this view</h3><div className="grid gap-3 md:grid-cols-3">{focus.missing_data?.map((item) => <article key={item.title} className="rounded-xl border border-dashed border-white/15 bg-[#111018] p-4"><span className="text-[9px] font-bold uppercase tracking-wider text-amber-100">Needs data</span><h4 className="mb-1 mt-2 text-xs font-semibold text-white">{item.title}</h4><p className="m-0 text-[10px] leading-5 text-[#9995a8]">{item.detail}</p></article>)}</div></div>
+    <p className="m-0 text-[10px] leading-5 text-[#777285]">{focus.basis_note}</p>
+  </section>;
+}
+
 function formatMoney(amount, currency = "USD") {
   const value = Number(amount || 0);
   try {
@@ -85,6 +116,27 @@ function formatMoney(amount, currency = "USD") {
   } catch {
     return `${currency} ${value.toFixed(2)}`;
   }
+}
+
+function balanceDue(record) {
+  if (record.total_amount == null) return null;
+  return Math.max(0, Number(record.balance_due ?? (Number(record.total_amount) - Number(record.amount_paid || 0))));
+}
+
+function PaymentControl({ record, onSave, busy }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const total = Number(record.total_amount);
+  const paid = Number(record.amount_paid || 0);
+  const amount = Number(draft);
+  if (record.total_amount == null) return <span className="text-[9px] text-[#777285]">Confirm amount first</span>;
+  if (!editing) return <button type="button" disabled={busy} onClick={() => { setDraft(String(paid)); setEditing(true); }} className="whitespace-nowrap rounded-lg border border-white/10 px-2.5 py-2 text-[9px] text-violet-200 hover:bg-white/[0.04] disabled:opacity-50">{paid > 0 ? "Edit paid total" : "Record payment"}</button>;
+  return <div className="flex min-w-56 flex-wrap items-end gap-2">
+    <label className="text-[9px] text-[#9995a8]">Total paid to date ({record.currency || "workspace currency"})<input type="number" min="0" max={total} step="0.01" value={draft} onChange={(event) => setDraft(event.target.value)} className="mt-1 block w-28 rounded-lg border border-white/10 bg-[#111018] px-2 py-1.5 text-[10px] text-white" /></label>
+    <button type="button" onClick={() => setDraft(String(total))} className="rounded-lg border border-white/10 px-2 py-1.5 text-[9px] text-[#c5c0d0]">Full amount</button>
+    <button type="button" disabled={busy || !/^\d+(?:\.\d{1,2})?$/.test(draft.trim()) || !Number.isFinite(amount) || amount > total} onClick={async () => { if (await onSave(record, amount)) setEditing(false); }} className="rounded-lg bg-violet-300 px-2 py-1.5 text-[9px] font-semibold text-[#171222] disabled:opacity-50">Save</button>
+    <button type="button" onClick={() => setEditing(false)} className="px-1 text-[9px] text-[#9995a8]">Cancel</button>
+  </div>;
 }
 
 function localDateIso(date = new Date()) {
@@ -108,10 +160,10 @@ function FinanceRecordList({ records, documents, type, currency, onPayment, onRe
     return <EmptyState title={isBill ? "No supplier bills yet" : "No customer invoices yet"} copy={isBill ? "Confirmed supplier bills will appear here with due dates and payment status." : "Confirmed customer invoices will appear here with outstanding and received status."} action={emptyAction} />;
   }
   return <div className="overflow-x-auto rounded-xl border border-white/[0.07]">
-    <table className="w-full min-w-[940px] border-collapse text-left">
-      <thead><tr className="border-b border-white/[0.08] bg-white/[0.02] text-[10px] text-[#777285]">{[isBill ? "Supplier / bill" : "Customer / invoice", "Reference", "Issue date", "Due date", "Amount", "Status", "Source", "Actions"].map((label) => <th key={label} className="px-3 py-3 font-medium">{label}</th>)}</tr></thead>
+    <table className="w-full min-w-[1080px] border-collapse text-left">
+      <thead><tr className="border-b border-white/[0.08] bg-white/[0.02] text-[10px] text-[#777285]">{[isBill ? "Supplier / bill" : "Customer / invoice", "Reference", "Issue date", "Due date", "Total", "Paid to date", "Balance due", "Status", "Source", "Actions"].map((label) => <th key={label} className="px-3 py-3 font-medium">{label}</th>)}</tr></thead>
       <tbody>{filtered.map((record) => {
-        const statusLabel = record.status === "unsupported" ? "Unsupported" : record.status !== "confirmed" ? "Needs review" : record.payment_status === "paid" ? (isBill ? "Paid" : "Received") : getDueStatus(record.due_date);
+        const statusLabel = record.status === "unsupported" ? "Unsupported" : record.status !== "confirmed" ? "Needs review" : record.payment_status === "paid" ? (isBill ? "Paid" : "Received") : getDueStatus(record.due_date) === "Overdue" ? "Overdue" : record.payment_status === "partial" ? "Partially paid" : getDueStatus(record.due_date);
         const tagStyle = record.status === "unsupported" ? "bg-white/[0.06] text-[#9995a8]" : record.status !== "confirmed" ? "bg-amber-200/10 text-amber-100" : record.payment_status === "paid" ? "bg-emerald-300/10 text-emerald-200" : statusLabel === "Overdue" ? "bg-rose-300/10 text-rose-200" : "bg-violet-300/10 text-violet-200";
         return <tr key={record.id} className="border-b border-white/[0.05] text-[11px] text-[#c5c0d0] last:border-0">
           <td className="px-3 py-4"><p className="m-0 font-medium text-white">{record.counterparty || "Name not identified"}</p><p className="mb-0 mt-1 text-[9px] text-[#777285]">{isBill ? "Supplier" : "Customer"}</p></td>
@@ -119,9 +171,11 @@ function FinanceRecordList({ records, documents, type, currency, onPayment, onRe
           <td className="px-3 py-4">{formatStatementDate(record.issue_date)}</td>
           <td className="px-3 py-4">{formatStatementDate(record.due_date)}</td>
           <td className="px-3 py-4 font-semibold text-white">{record.total_amount == null ? "—" : formatMoney(record.total_amount, record.currency || currency)}</td>
+          <td className="px-3 py-4">{record.status === "confirmed" ? formatMoney(record.amount_paid || 0, record.currency || currency) : "—"}</td>
+          <td className="px-3 py-4 font-semibold text-white">{record.status === "confirmed" && balanceDue(record) != null ? formatMoney(balanceDue(record), record.currency || currency) : "—"}</td>
           <td className="px-3 py-4"><span className={`rounded-full px-2.5 py-1 text-[9px] ${tagStyle}`}>{statusLabel}</span></td>
           <td className="max-w-48 truncate px-3 py-4" title={documents.find((doc) => doc.id === record.document_id)?.name || "Source document"}>{documents.find((doc) => doc.id === record.document_id)?.name || "Source document"}</td>
-          <td className="px-3 py-3"><div className="flex min-w-48 items-center gap-2">{record.status === "confirmed" && <button type="button" disabled={busy} onClick={() => onPayment(record, record.payment_status === "paid" ? "unpaid" : "paid")} className="whitespace-nowrap rounded-lg border border-white/10 px-2.5 py-2 text-[9px] text-violet-200 hover:bg-white/[0.04] disabled:opacity-50">{record.payment_status === "paid" ? (isBill ? "Mark unpaid" : "Mark outstanding") : (isBill ? "Mark paid" : "Mark received")}</button>}{isBill && record.status === "confirmed" && record.payment_status !== "paid" && <ReminderControl reminderDate={record.reminder_date} dueDate={record.due_date} busy={busy} onSave={(reminderDate) => onReminder(record, reminderDate)} />}</div></td>
+          <td className="px-3 py-3"><div className="flex min-w-48 items-center gap-2">{record.status === "confirmed" && <PaymentControl record={record} onSave={onPayment} busy={busy} />}{isBill && record.status === "confirmed" && record.payment_status !== "paid" && <ReminderControl reminderDate={record.reminder_date} dueDate={record.due_date} busy={busy} onSave={(reminderDate) => onReminder(record, reminderDate)} />}</div></td>
         </tr>;
       })}</tbody>
     </table>
@@ -156,6 +210,7 @@ function Onboarding({ onComplete, busy, notice }) {
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState({
     businessName: "",
+    businessType: "",
     industry: "",
     country: "",
     currency: "USD",
@@ -208,6 +263,8 @@ function Onboarding({ onComplete, busy, notice }) {
             <p className="mb-6 mt-2 text-xs text-[#9995a8]">Weâ€™ll use this to tailor categories, reporting, and financial periods.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Business name"><input autoFocus value={profile.businessName} onChange={(e) => update("businessName", e.target.value)} placeholder="e.g. Northstar Studio" /></Field>
+              <Field label="Finance overview type"><select value={profile.businessType} onChange={(e) => update("businessType", e.target.value)}><option value="">Choose later</option><option value="Retail">Retail</option><option value="Corporate">Corporate</option></select></Field>
+              <p className="mb-3 mt-0 text-[10px] text-[#9995a8]">Retail highlights collections and stock data gaps. Corporate highlights payables, budgets and entity reporting.</p>
               <Field label="Industry"><input value={profile.industry} onChange={(e) => update("industry", e.target.value)} placeholder="e.g. Retail, software, consulting" /></Field>
               <Field label="Country"><input value={profile.country} onChange={(e) => update("country", e.target.value)} placeholder="Country or region" /></Field>
               <Field label="Operating currency"><select value={profile.currency} onChange={(e) => update("currency", e.target.value)}>{["USD", "INR", "EUR", "GBP", "CAD", "AUD", "Other"].map((x) => <option key={x}>{x}</option>)}</select></Field>
@@ -388,6 +445,8 @@ export default function FinanceIndex() {
   const initialLoadStarted = useRef(false);
   const [view, setView] = useState("overview");
   const [profile, setProfile] = useState(null);
+  const [overview, setOverview] = useState(null);
+  const [payrollSummary, setPayrollSummary] = useState(null);
   const [loadingWorkspace, setLoadingWorkspace] = useState(true);
   const [section, setSection] = useState("Overview");
   const [documents, setDocuments] = useState([]);
@@ -403,16 +462,20 @@ export default function FinanceIndex() {
     try {
       const workspace = await financeApi.getWorkspace();
       setProfile(fromFinanceWorkspace(workspace));
-      const [remoteDocuments, remoteRecords, remoteStatements] = await Promise.all([financeApi.listDocuments(), financeApi.listRecords(), financeApi.listStatements()]);
+      const [remoteDocuments, remoteRecords, remoteStatements, remoteOverview, remotePayroll] = await Promise.all([financeApi.listDocuments(), financeApi.listRecords(), financeApi.listStatements(), financeApi.getOverview(), financeApi.payrollOverview().catch(() => null)]);
       setDocuments(remoteDocuments.map(fromFinanceDocument));
       setRecords(remoteRecords);
       setStatements(remoteStatements);
+      setOverview(remoteOverview);
+      setPayrollSummary(remotePayroll);
     } catch (error) {
       if (error.response?.status === 404) {
         setProfile(null);
         setDocuments([]);
         setRecords([]);
         setStatements([]);
+        setOverview(null);
+        setPayrollSummary(null);
       } else {
         setLoadError(apiErrorMessage(error, "Could not load your finance workspace."));
       }
@@ -426,6 +489,11 @@ export default function FinanceIndex() {
     initialLoadStarted.current = true;
     refreshWorkspace();
   }, [refreshWorkspace]);
+
+  const refreshOverview = useCallback(async () => {
+    try { setOverview(await financeApi.getOverview()); }
+    catch { setOverview(null); }
+  }, []);
 
   const filtered = useMemo(
     () => documents.filter((item) => item.name.toLowerCase().includes(search.toLowerCase())),
@@ -457,6 +525,7 @@ export default function FinanceIndex() {
         failures.push(`${file.name}: ${apiErrorMessage(error, "upload failed")}`);
       }
     }
+    await refreshOverview();
     setNotice(failures.length ? `${added} file(s) added. ${failures.join(" Â· ")}` : `${added} file(s) uploaded to your finance workspace.`);
     setBusy(false);
   }
@@ -467,11 +536,25 @@ export default function FinanceIndex() {
       const workspace = await financeApi.saveWorkspace(toFinanceWorkspace(savedProfile));
       setProfile(fromFinanceWorkspace(workspace));
       await uploadFiles(savedProfile.files);
+      await refreshOverview();
     } catch (error) {
       setNotice(apiErrorMessage(error, "Could not save your finance setup."));
     } finally {
       setBusy(false);
     }
+  }
+
+  async function changeBusinessType(businessType) {
+    if (!profile || businessType === profile.businessType) return;
+    setBusy(true);
+    try {
+      const workspace = await financeApi.saveWorkspace(toFinanceWorkspace({ ...profile, businessType }));
+      setProfile(fromFinanceWorkspace(workspace));
+      await refreshOverview();
+      setNotice(`Finance overview set to ${businessType}. Confirmed record totals were not changed.`);
+    } catch (error) {
+      setNotice(apiErrorMessage(error, "Could not update your overview type."));
+    } finally { setBusy(false); }
   }
 
   async function deleteDocument(id) {
@@ -480,6 +563,7 @@ export default function FinanceIndex() {
       setDocuments((current) => current.filter((document) => document.id !== id));
       setRecords((current) => current.filter((record) => record.document_id !== id));
       setStatements((current) => current.filter((statement) => statement.document_id !== id));
+      await refreshOverview();
       setNotice("Document deleted from your workspace.");
     } catch (error) {
       setNotice(apiErrorMessage(error, "Could not delete that document."));
@@ -496,6 +580,7 @@ export default function FinanceIndex() {
       ]);
       setDocuments((current) => current.map((item) => item.id === document.id ? { ...item, status: result.status.replaceAll("_", " ") } : item));
       setStatements(await financeApi.listStatements());
+      await refreshOverview();
       setNotice(`${result.records.length} finance record(s) found in ${document.name}. Review each record below.`);
     } catch (error) {
       setNotice(apiErrorMessage(error, `Could not recheck ${document.name}.`));
@@ -510,6 +595,7 @@ export default function FinanceIndex() {
     try {
       const updated = await financeApi.markRecordUnsupported(id);
       setRecords((current) => current.map((record) => record.id === id ? updated : record));
+      await refreshOverview();
       setNotice("Marked as a statement/unsupported document. It stays out of income, expense, and due totals.");
     } catch (error) {
       setNotice(apiErrorMessage(error, "Could not mark that record as unsupported."));
@@ -524,6 +610,7 @@ export default function FinanceIndex() {
       const updated = await financeApi.confirmRecord(id, corrections);
       setRecords((current) => current.map((record) => record.id === id ? updated : record));
       setDocuments((current) => current.map((document) => document.id === updated.document_id ? { ...document, status: "confirmed" } : document));
+      await refreshOverview();
       setNotice("Finance details confirmed and saved.");
     } catch (error) {
       setNotice(apiErrorMessage(error, "Could not confirm this finance record."));
@@ -532,14 +619,17 @@ export default function FinanceIndex() {
     }
   }
 
-  async function updatePayment(record, paymentStatus) {
+  async function updatePayment(record, amountPaid) {
     setBusy(true);
     try {
-      const updated = await financeApi.updatePayment(record.id, paymentStatus);
+      const updated = await financeApi.updatePayment(record.id, amountPaid);
       setRecords((current) => current.map((item) => item.id === updated.id ? updated : item));
-      setNotice(paymentStatus === "paid" ? "Payment status saved. No bank payment was initiated." : "Marked as unpaid/outstanding.");
+      await refreshOverview();
+      setNotice("Total paid to date saved. Remaining balance updated; no bank payment was initiated.");
+      return true;
     } catch (error) {
       setNotice(apiErrorMessage(error, "Could not update payment status."));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -588,13 +678,13 @@ export default function FinanceIndex() {
   const confirmedRecords = records.filter((record) => record.status === "confirmed");
   const invoices = confirmedRecords.filter((record) => record.record_type === "invoice");
   const bills = confirmedRecords.filter((record) => record.record_type === "expense");
-  const openInvoices = invoices.filter((record) => record.payment_status !== "paid");
-  const openBills = bills.filter((record) => record.payment_status !== "paid");
+  const openInvoices = invoices.filter((record) => balanceDue(record) > 0);
+  const openBills = bills.filter((record) => balanceDue(record) > 0);
   const paidBills = bills.filter((record) => record.payment_status === "paid");
   const dueBills = [...openBills].sort((a, b) => (a.due_date || "9999").localeCompare(b.due_date || "9999"));
   const dueInvoices = [...openInvoices].sort((a, b) => (a.due_date || "9999").localeCompare(b.due_date || "9999"));
-  const sumInWorkspaceCurrency = (items) => items.reduce((total, record) => (
-    (record.currency || currency) === currency ? total + Number(record.total_amount || 0) : total
+  const sumInWorkspaceCurrency = (items, remaining = false) => items.reduce((total, record) => (
+    (record.currency || currency).toUpperCase() === currency.toUpperCase() ? total + Number(remaining ? balanceDue(record) || 0 : record.total_amount || 0) : total
   ), 0);
   const reviewCount = records.filter((record) => record.status === "needs_review").length;
   const overdueBills = openBills.filter((record) => getDueStatus(record.due_date) === "Overdue");
@@ -608,7 +698,7 @@ export default function FinanceIndex() {
     </label>
   );
 
-  const openChat = () => setView("chat");
+  const openChat = () => { void refreshWorkspace(); setView("chat"); };
   const activeView = view === "onboarding" ? "chat" : view;
 
   return (
@@ -633,46 +723,50 @@ export default function FinanceIndex() {
           <div>
             <p className="mb-2 flex items-center gap-2 text-[9px] font-bold tracking-[0.17em] text-violet-300"><span className="h-px w-4 bg-violet-300" /> FINANCE WORKSPACE</p>
             <h1 className="m-0 font-display text-3xl font-bold tracking-tight text-white">{profile.businessName}</h1>
-            <p className="mb-0 mt-2 text-xs text-[#9995a8]">Your Finance Analyst AI | {profile.currency} | {profile.industry || "Business finance"}</p>
+            <p className="mb-0 mt-2 text-xs text-[#9995a8]">Your Finance Analyst AI | {profile.currency} | {profile.businessType || profile.industry || "Business finance"}</p>
           </div>
-          {importButton}
+          <div className="flex flex-wrap items-end gap-3"><label className="text-[10px] text-[#9995a8]">Overview type<select aria-label="Finance overview type" value={profile.businessType || ""} disabled={busy} onChange={(event) => void changeBusinessType(event.target.value)} className="mt-1 block h-11 rounded-lg border border-white/10 bg-[#171620] px-3 text-xs text-white"><option value="" disabled>Choose a type</option><option value="Retail">Retail</option><option value="Corporate">Corporate</option></select></label>{importButton}</div>
         </header>
         {notice && <p role="status" className="mb-4 rounded-lg border border-violet-300/20 bg-violet-300/[0.06] px-4 py-3 text-xs text-violet-100">{notice}</p>}
         <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-white/[0.08]" aria-label="Finance workspace">
           {SECTIONS.map(({ id, icon: Icon }) => <button key={id} type="button" onClick={() => setSection(id)} className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[11px] transition ${section === id ? "border-violet-300 text-violet-200" : "border-transparent text-[#9995a8] hover:text-white"}`}><Icon className="text-[10px]" />{id}</button>)}
         </nav>
         {section === "Overview" && <>
-          <div className="mb-5"><p className="mb-1 text-[9px] font-bold tracking-[0.16em] text-violet-300">CASH OBLIGATIONS</p><h2 className="m-0 text-base font-semibold">Your finance at a glance</h2><p className="mb-0 mt-1 text-[10px] text-[#777285]">Confirmed records in {currency}; other currencies are not converted. You mark payment status here.</p></div>
-          {(reviewCount > 0 || overdueBills.length > 0) && <section className="mb-5 rounded-2xl border border-amber-200/15 bg-amber-200/[0.035] p-4"><header className="mb-3 flex items-center gap-2"><FaInfoCircle className="text-amber-200" /><h2 className="m-0 text-sm font-semibold text-white">Needs attention</h2></header><div className="grid gap-2 sm:grid-cols-2">{reviewCount > 0 && <button type="button" onClick={() => setSection("Documents")} className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-[#111018]/70 px-4 py-3 text-left text-[11px] text-amber-100"><span>{reviewCount} record{reviewCount === 1 ? "" : "s"} need review</span><span>Review <FaArrowRight className="ml-1 inline" /></span></button>}{overdueBills.length > 0 && <button type="button" onClick={() => setSection("Bills")} className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-[#111018]/70 px-4 py-3 text-left text-[11px] text-rose-200"><span>{overdueBills.length} overdue bill{overdueBills.length === 1 ? "" : "s"} · {formatMoney(sumInWorkspaceCurrency(overdueBills), currency)}</span><span>View bills <FaArrowRight className="ml-1 inline" /></span></button>}</div></section>}
+          <div className="mb-5"><p className="mb-1 text-[9px] font-bold tracking-[0.16em] text-violet-300">CONFIRMED RECORDS</p><h2 className="m-0 text-base font-semibold">Your finance at a glance</h2><p className="mb-0 mt-1 text-[10px] text-[#777285]">Open totals are remaining balances after recorded payments in {currency}; other currencies are excluded. Payment amounts are user-entered and not bank reconciled. Disputes are not tracked.</p></div>
+          {(reviewCount > 0 || overdueBills.length > 0) && <section className="mb-5 rounded-2xl border border-amber-200/15 bg-amber-200/[0.035] p-4"><header className="mb-3 flex items-center gap-2"><FaInfoCircle className="text-amber-200" /><h2 className="m-0 text-sm font-semibold text-white">Needs attention</h2></header><div className="grid gap-2 sm:grid-cols-2">{reviewCount > 0 && <button type="button" onClick={() => setSection("Documents")} className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-[#111018]/70 px-4 py-3 text-left text-[11px] text-amber-100"><span>{reviewCount} record{reviewCount === 1 ? "" : "s"} need review</span><span>Review <FaArrowRight className="ml-1 inline" /></span></button>}{overdueBills.length > 0 && <button type="button" onClick={() => setSection("Bills")} className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-[#111018]/70 px-4 py-3 text-left text-[11px] text-rose-200"><span>{overdueBills.length} overdue bill{overdueBills.length === 1 ? "" : "s"} · {formatMoney(sumInWorkspaceCurrency(overdueBills, true), currency)}</span><span>View bills <FaArrowRight className="ml-1 inline" /></span></button>}</div></section>}
           <section className="mb-5 grid grid-cols-4 gap-3 max-[1050px]:grid-cols-2 max-[540px]:grid-cols-1">
-            <Metric label="To collect" value={formatMoney(sumInWorkspaceCurrency(openInvoices), currency)} note={`${openInvoices.length} unpaid customer invoice(s)`} icon={FaHandHoldingUsd} />
-            <Metric label="Bills to pay" value={formatMoney(sumInWorkspaceCurrency(openBills), currency)} note={`${openBills.length} unpaid supplier bill(s)`} icon={FaMoneyBillWave} />
-            <Metric label="Overdue bills" value={formatMoney(sumInWorkspaceCurrency(overdueBills), currency)} note={`${overdueBills.length} past due`} icon={FaClock} />
-            <Metric label="Bills marked paid" value={formatMoney(sumInWorkspaceCurrency(paidBills), currency)} note={`${paidBills.length} payment(s) recorded`} icon={FaCheckCircle} />
+            <Metric label="To collect" value={formatMoney(sumInWorkspaceCurrency(openInvoices, true), currency)} note={`${openInvoices.length} customer invoice(s) with a balance`} icon={FaHandHoldingUsd} />
+            <Metric label="Bills to pay" value={formatMoney(sumInWorkspaceCurrency(openBills, true), currency)} note={`${openBills.length} supplier bill(s) with a balance`} icon={FaMoneyBillWave} />
+            <Metric label="Overdue bills" value={formatMoney(sumInWorkspaceCurrency(overdueBills, true), currency)} note={`${overdueBills.length} past due`} icon={FaClock} />
+            <Metric label="Bills marked paid" value={formatMoney(sumInWorkspaceCurrency(paidBills), currency)} note={`${paidBills.length} bill(s) paid in full`} icon={FaCheckCircle} />
           </section>
+          <BusinessFocus focus={overview?.focus} currency={currency} onSection={setSection} />
+          <button type="button" onClick={() => setSection("Payroll")} className="mb-5 flex w-full flex-wrap items-center justify-between gap-4 rounded-2xl border border-violet-300/20 bg-violet-300/[0.04] p-5 text-left hover:border-violet-300/40"><div><p className="m-0 text-[9px] font-bold uppercase tracking-[0.15em] text-violet-200">Employee costs</p><h2 className="mb-0 mt-2 text-sm font-semibold text-white">Payroll & payslips</h2><p className="mb-0 mt-1 text-[11px] text-[#9995a8]">{payrollSummary ? `${payrollSummary.employee_count} active employee(s) · ${payrollSummary.draft_payslips} draft(s) · ${payrollSummary.finalized_unpaid_payslips} finalized unpaid` : "Add employees, review pay and leave, and prepare payslips."}</p></div><span className="text-xs font-semibold text-violet-200">Open payroll <FaArrowRight className="ml-1 inline" /></span></button>
           {reviewCount > 0 && <section className="mb-5 space-y-3"><h2 className="m-0 text-sm font-semibold">Needs your review</h2>{records.filter((record) => record.status === "needs_review").map((record) => <RecordReviewCard key={record.id} record={record} documentName={documents.find((document) => document.id === record.document_id)?.name} onConfirm={confirmRecord} onMarkUnsupported={markUnsupported} busy={busy} />)}</section>}
           <section className="mb-5 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-            <article className="min-w-0 rounded-2xl border border-white/[0.07] bg-[#171620] p-5"><header className="mb-4 flex items-center justify-between gap-3"><div><h2 className="m-0 text-sm font-semibold">Bills coming up</h2><p className="mb-0 mt-1 text-[10px] text-[#777285]">Unpaid supplier bills ordered by due date</p></div><button type="button" onClick={() => setSection("Bills")} className="text-[10px] text-violet-200">All bills <FaArrowRight className="ml-1 inline" /></button></header>
-              {dueBills.length ? <div className="divide-y divide-white/[0.06]">{dueBills.slice(0, 5).map((record) => <div key={record.id} className="flex flex-wrap items-center gap-3 py-3"><div className="min-w-0 flex-1"><p className="m-0 truncate text-xs font-medium text-white">{record.counterparty || "Supplier not identified"}</p><p className="mb-0 mt-1 text-[9px] text-[#777285]">{record.reference_number || "No reference"} · due {formatStatementDate(record.due_date)}</p></div><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[9px] text-[#c5c0d0]">{getDueStatus(record.due_date)}</span><strong className="text-xs text-white">{record.total_amount == null ? "Amount missing" : formatMoney(record.total_amount, record.currency || currency)}</strong><ReminderControl reminderDate={record.reminder_date} dueDate={record.due_date} busy={busy} onSave={(reminderDate) => saveReminder(record, reminderDate)} /></div>)}</div> : <p className="m-0 rounded-lg border border-dashed border-white/10 p-5 text-xs text-[#9995a8]">No confirmed unpaid bills. Supplier bills appear here after review.</p>}
+            <article className="min-w-0 rounded-2xl border border-white/[0.07] bg-[#171620] p-5"><header className="mb-4 flex items-center justify-between gap-3"><div><h2 className="m-0 text-sm font-semibold">Bills coming up</h2><p className="mb-0 mt-1 text-[10px] text-[#777285]">Supplier bills with a balance, ordered by due date</p></div><button type="button" onClick={() => setSection("Bills")} className="text-[10px] text-violet-200">All bills <FaArrowRight className="ml-1 inline" /></button></header>
+              {dueBills.length ? <div className="divide-y divide-white/[0.06]">{dueBills.slice(0, 5).map((record) => <div key={record.id} className="flex flex-wrap items-center gap-3 py-3"><div className="min-w-0 flex-1"><p className="m-0 truncate text-xs font-medium text-white">{record.counterparty || "Supplier not identified"}</p><p className="mb-0 mt-1 text-[9px] text-[#777285]">{record.reference_number || "No reference"} · due {formatStatementDate(record.due_date)}</p></div><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[9px] text-[#c5c0d0]">{getDueStatus(record.due_date)}</span><strong className="text-xs text-white">{balanceDue(record) == null ? "Amount missing" : formatMoney(balanceDue(record), record.currency || currency)}</strong><ReminderControl reminderDate={record.reminder_date} dueDate={record.due_date} busy={busy} onSave={(reminderDate) => saveReminder(record, reminderDate)} /></div>)}</div> : <p className="m-0 rounded-lg border border-dashed border-white/10 p-5 text-xs text-[#9995a8]">No confirmed bills with a remaining balance. Supplier bills appear here after review.</p>}
             </article>
             <article className="min-w-0 rounded-2xl border border-white/[0.07] bg-[#171620] p-5"><header className="mb-4 flex items-center justify-between gap-3"><div><h2 className="m-0 text-sm font-semibold">Customer invoices to collect</h2><p className="mb-0 mt-1 text-[10px] text-[#777285]">Amounts customers owe you</p></div><button type="button" onClick={() => setSection("Receivables")} className="text-[10px] text-violet-200">Receivables <FaArrowRight className="ml-1 inline" /></button></header>
-              {dueInvoices.length ? <div className="divide-y divide-white/[0.06]">{dueInvoices.slice(0, 5).map((record) => <div key={record.id} className="flex items-center gap-3 py-3"><div className="min-w-0 flex-1"><p className="m-0 truncate text-xs font-medium text-white">{record.counterparty || "Customer not identified"}</p><p className="mb-0 mt-1 text-[9px] text-[#777285]">{record.reference_number || "No reference"} · due {formatStatementDate(record.due_date)}</p></div><span className={`rounded-full px-2 py-1 text-[9px] ${getDueStatus(record.due_date) === "Overdue" ? "bg-rose-300/10 text-rose-200" : "bg-violet-300/10 text-violet-200"}`}>{getDueStatus(record.due_date)}</span><strong className="text-xs text-white">{record.total_amount == null ? "—" : formatMoney(record.total_amount, record.currency || currency)}</strong></div>)}</div> : <p className="m-0 rounded-lg border border-dashed border-white/10 p-5 text-xs text-[#9995a8]">No unpaid customer invoices.</p>}
+              {dueInvoices.length ? <div className="divide-y divide-white/[0.06]">{dueInvoices.slice(0, 5).map((record) => <div key={record.id} className="flex items-center gap-3 py-3"><div className="min-w-0 flex-1"><p className="m-0 truncate text-xs font-medium text-white">{record.counterparty || "Customer not identified"}</p><p className="mb-0 mt-1 text-[9px] text-[#777285]">{record.reference_number || "No reference"} · due {formatStatementDate(record.due_date)}</p></div><span className={`rounded-full px-2 py-1 text-[9px] ${getDueStatus(record.due_date) === "Overdue" ? "bg-rose-300/10 text-rose-200" : "bg-violet-300/10 text-violet-200"}`}>{getDueStatus(record.due_date)}</span><strong className="text-xs text-white">{balanceDue(record) == null ? "—" : formatMoney(balanceDue(record), record.currency || currency)}</strong></div>)}</div> : <p className="m-0 rounded-lg border border-dashed border-white/10 p-5 text-xs text-[#9995a8]">No customer invoices with a remaining balance.</p>}
             </article>
           </section>
           <section className="mb-5 rounded-2xl border border-white/[0.07] bg-[#171620] p-5"><div className="mb-5"><h2 className="m-0 text-sm font-semibold">Invoices and bills by month</h2><p className="mb-0 mt-1 text-[10px] text-[#777285]">Confirmed document amounts grouped by issue date, not cash movement.</p></div><div className="grid grid-cols-6 gap-3 max-[700px]:grid-cols-3">{chartMonths.map((item) => <div key={item.month} className="min-w-0"><div className="flex h-28 items-end justify-center gap-1 rounded-lg bg-[#111018] px-2 pb-2 pt-3"><div title={`Invoices ${formatMoney(item.invoices, currency)}`} className="w-4 rounded-t bg-violet-300" style={{ height: `${Math.max(item.invoices ? 8 : 0, (item.invoices / chartMaximum) * 100)}%` }} /><div title={`Bills ${formatMoney(item.bills, currency)}`} className="w-4 rounded-t bg-sky-300/70" style={{ height: `${Math.max(item.bills ? 8 : 0, (item.bills / chartMaximum) * 100)}%` }} /></div><p className="mb-0 mt-2 truncate text-center text-[9px] text-[#9995a8]">{item.label}</p></div>)}</div><div className="mt-4 flex flex-wrap gap-4 text-[9px] text-[#9995a8]"><span><i className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-violet-300" />Customer invoices</span><span><i className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-sky-300/70" />Supplier bills</span></div></section>
           <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-5"><header className="mb-3 flex items-center justify-between"><div><h2 className="m-0 text-sm font-semibold">Recently paid bills</h2><p className="mb-0 mt-1 text-[10px] text-[#777285]">Payments you marked as complete</p></div><button type="button" onClick={() => setSection("Bills")} className="text-[10px] text-violet-200">View bills <FaArrowRight className="ml-1 inline" /></button></header>{paidBills.length ? <div className="divide-y divide-white/[0.06]">{[...paidBills].sort((a, b) => (b.paid_at || "").localeCompare(a.paid_at || "")).slice(0, 4).map((record) => <div key={record.id} className="flex items-center gap-3 py-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-300/10 text-emerald-200"><FaCheck /></span><div className="min-w-0 flex-1"><p className="m-0 truncate text-xs text-white">{record.counterparty || "Supplier not identified"}</p><p className="mb-0 mt-1 text-[9px] text-[#777285]">{record.reference_number || "Supplier bill"} · paid {formatStatementDate(record.paid_at)}</p></div><strong className="text-xs text-white">{record.total_amount == null ? "—" : formatMoney(record.total_amount, record.currency || currency)}</strong></div>)}</div> : <p className="m-0 rounded-lg border border-dashed border-white/10 p-5 text-xs text-[#9995a8]">Bills you mark as paid appear here. The app does not initiate payment.</p>}</section>
         </>}
+        {section === "Payroll" && <PayrollPanel currency={currency} businessType={profile.businessType || "Business"} country={profile.country || ""} onChange={setPayrollSummary} />}
+        {section === "Insights" && <FinanceInsights currency={currency} />}
         {section === "Plugins" && <FinancePluginsPanel />}
         {section === "Documents" && <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-5">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="m-0 text-base font-semibold">Documents & imports</h2><p className="mb-0 mt-1 text-xs text-[#9995a8]">Invoices, bills, receipts, and transaction files you add.</p></div><label className="flex h-9 w-64 items-center gap-2 rounded-lg border border-white/[0.08] bg-[#111018] px-3 text-[10px] text-[#777285]"><FaSearch /><input aria-label="Search imported documents" className="min-w-0 flex-1 bg-transparent text-white outline-none" placeholder="Search files..." value={search} onChange={(e) => setSearch(e.target.value)} /></label></div>
           {filtered.length ? <div className="divide-y divide-white/[0.06]">{filtered.map((doc) => { const docRecords = records.filter((record) => record.document_id === doc.id); return <div key={doc.id} className="flex flex-wrap items-center gap-3 py-3"><span className="grid h-9 w-9 place-items-center rounded-lg bg-violet-300/10 text-violet-200"><FaFileAlt /></span><div className="min-w-0 flex-1"><p className="m-0 truncate text-xs text-white">{doc.name}</p><p className="mb-0 mt-1 text-[10px] text-[#777285]">{doc.kind} · added {doc.added} · {formatFileSize(doc.sizeBytes)}</p></div><span className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[9px] text-[#c5c0d0]">{doc.status}</span>{doc.extension === ".pdf" && docRecords.length > 0 && <button type="button" disabled={busy} onClick={() => recheckPdf(doc)} className="rounded-lg border border-violet-300/20 px-3 py-2 text-[10px] text-violet-200 hover:bg-violet-300/[0.06] disabled:opacity-50">Recheck PDF for missing records</button>}<button type="button" onClick={() => downloadDocument(doc)} className="grid h-8 w-8 place-items-center rounded-lg text-[#c5c0d0] hover:bg-white/[0.06]" aria-label={`Download ${doc.name}`} title="Download"><FaDownload /></button><button type="button" onClick={() => deleteDocument(doc.id)} className="grid h-8 w-8 place-items-center rounded-lg text-rose-200 hover:bg-rose-400/10" aria-label={`Delete ${doc.name}`} title="Delete"><FaTrash /></button></div>; })}</div> : <EmptyState title={search ? "No matching files" : "No documents yet"} copy={search ? "Try another file name." : "Add a batch of invoices, bills, receipts, or bank exports to your workspace."} action={importButton} />}
         </section>}
         {section === "Receivables" && <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-5 sm:p-6">
-          <header className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-[9px] font-bold tracking-[0.16em] text-violet-300">MONEY OWED TO YOU</p><h2 className="m-0 text-base font-semibold">Customer invoices</h2><p className="mb-0 mt-1 text-xs text-[#9995a8]">Receivables are invoices your customers owe your business.</p></div><div className="text-right"><p className="m-0 text-[9px] text-[#777285]">Outstanding amount</p><strong className="text-lg text-white">{formatMoney(sumInWorkspaceCurrency(openInvoices), currency)}</strong></div></header>
+          <header className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-[9px] font-bold tracking-[0.16em] text-violet-300">MONEY OWED TO YOU</p><h2 className="m-0 text-base font-semibold">Customer invoices</h2><p className="mb-0 mt-1 text-xs text-[#9995a8]">Receivables are invoices your customers owe your business.</p></div><div className="text-right"><p className="m-0 text-[9px] text-[#777285]">Outstanding amount</p><strong className="text-lg text-white">{formatMoney(sumInWorkspaceCurrency(openInvoices, true), currency)}</strong></div></header>
           <FinanceRecordList records={records} documents={documents} type="invoice" currency={currency} onPayment={updatePayment} onReminder={saveReminder} busy={busy} emptyAction={importButton} />
         </section>}
         {section === "Bills" && <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-5 sm:p-6">
-          <header className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-[9px] font-bold tracking-[0.16em] text-sky-200">MONEY YOU OWE</p><h2 className="m-0 text-base font-semibold">Supplier bills</h2><p className="mb-0 mt-1 text-xs text-[#9995a8]">Bills are invoices from suppliers that your business needs to pay.</p></div><div className="flex gap-5 text-right"><div><p className="m-0 text-[9px] text-[#777285]">Unpaid</p><strong className="text-sm text-white">{formatMoney(sumInWorkspaceCurrency(openBills), currency)}</strong></div><div><p className="m-0 text-[9px] text-[#777285]">Marked paid</p><strong className="text-sm text-emerald-200">{formatMoney(sumInWorkspaceCurrency(paidBills), currency)}</strong></div></div></header>
+          <header className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-[9px] font-bold tracking-[0.16em] text-sky-200">MONEY YOU OWE</p><h2 className="m-0 text-base font-semibold">Supplier bills</h2><p className="mb-0 mt-1 text-xs text-[#9995a8]">Bills are invoices from suppliers that your business needs to pay.</p></div><div className="flex gap-5 text-right"><div><p className="m-0 text-[9px] text-[#777285]">Balance due</p><strong className="text-sm text-white">{formatMoney(sumInWorkspaceCurrency(openBills, true), currency)}</strong></div><div><p className="m-0 text-[9px] text-[#777285]">Marked paid</p><strong className="text-sm text-emerald-200">{formatMoney(sumInWorkspaceCurrency(paidBills), currency)}</strong></div></div></header>
           <FinanceRecordList records={records} documents={documents} type="expense" currency={currency} onPayment={updatePayment} onReminder={saveReminder} busy={busy} emptyAction={importButton} />
         </section>}
         {section === "Statements" && <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-5">
@@ -684,15 +778,16 @@ export default function FinanceIndex() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <article className="rounded-xl border border-white/[0.07] bg-[#111018] p-4"><h3 className="m-0 text-xs font-semibold text-white">How it works</h3><ol className="mb-0 mt-3 space-y-2 pl-4 text-[10px] leading-4 text-[#9995a8]"><li>Upload a finance document.</li><li>Review the extracted values and classify it.</li><li>Confirmed invoices and bills appear in their own lists and dashboard totals.</li></ol></article>
             <article className="rounded-xl border border-white/[0.07] bg-[#111018] p-4"><h3 className="m-0 text-xs font-semibold text-white">Your finance workspace</h3><p className="mb-0 mt-3 text-[10px] leading-5 text-[#9995a8]">Business: <strong className="text-[#ddd8e8]">{profile.businessName}</strong><br />Industry: <strong className="text-[#ddd8e8]">{profile.industry || "Not set"}</strong><br />Country: <strong className="text-[#ddd8e8]">{profile.country || "Not set"}</strong><br />Currency: <strong className="text-[#ddd8e8]">{currency}</strong></p></article>
-            <article className="rounded-xl border border-white/[0.07] bg-[#111018] p-4"><h3 className="m-0 text-xs font-semibold text-white">What it does not do</h3><ul className="mb-0 mt-3 space-y-2 pl-4 text-[10px] leading-4 text-[#9995a8]"><li>It does not initiate or authorize payments.</li><li>Reminder dates are saved preferences; no email or app notification is sent yet.</li><li>Statement transactions are stored separately for future matching and do not affect current invoice or bill totals.</li><li>Reconciliation is not available until statement transactions can be matched to bills and invoices.</li></ul></article>
+            <article className="rounded-xl border border-white/[0.07] bg-[#111018] p-4"><h3 className="m-0 text-xs font-semibold text-white">Current limits</h3><ul className="mb-0 mt-3 space-y-2 pl-4 text-[10px] leading-4 text-[#9995a8]"><li>Invoice and bill totals do not establish recognized revenue, final profit, or available cash.</li><li>Cumulative partial payments can be recorded, but disputes and bank reconciliation are not tracked yet.</li><li>Scanned image-only PDFs need OCR before their text can be read.</li><li>It does not initiate or authorize payments. Reminder dates are saved preferences; notifications are not sent yet.</li></ul></article>
           </div>
         </section>}
-        {section !== "Overview" && section !== "Documents" && section !== "Plugins" && section !== "Statements" && section !== "Receivables" && section !== "Bills" && section !== "About us" && <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-6">
+        {section !== "Overview" && section !== "Documents" && section !== "Plugins" && section !== "Statements" && section !== "Receivables" && section !== "Bills" && section !== "Insights" && section !== "About us" && <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-6">
           <p className="mb-2 text-[9px] font-bold tracking-[0.16em] text-violet-300">FINANCE WORKSPACE</p>
           <h2 className="m-0 font-display text-xl font-semibold">{section}</h2>
           <p className="mb-5 mt-2 max-w-2xl text-xs leading-5 text-[#9995a8]">{sectionCopy(section)}</p>
           {section === "Finance rules" ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <Rule label="Business name" value={profile.businessName} />
+            <Rule label="Overview type" value={profile.businessType || "Not selected"} />
             <Rule label="Industry" value={profile.industry || "Not set"} />
             <Rule label="Country" value={profile.country || "Not set"} />
             <Rule label="Operating currency" value={profile.currency} />
@@ -736,7 +831,7 @@ function sectionCopy(section) {
     Receivables: "Track customer invoices, outstanding balances, due dates, and follow-up drafts. Payment status should be backed by imported records or an authorized confirmation.",
     Bills: "Organize supplier bills, due dates, approval thresholds, and recurring costs. Payment execution always requires your authorization.",
     Reconciliation: "Bring in bank transaction exports to review possible matches against invoices, bills, and recorded payments.",
-    Insights: "Understand income, expenses, trends, and estimated cash flow, with the underlying records shown alongside each insight.",
+    Insights: "Explore user-supplied break-even and gross-margin calculations, and ask Finance AI about confirmed invoice and bill records.",
     Reports: "Prepare monthly summaries, outstanding balance reports, vendor expenses, and downloadable finance reports.",
     "Finance rules": "Review the preferences you set during onboarding. Thresholds help flag items for review; they do not authorize financial actions.",
   };

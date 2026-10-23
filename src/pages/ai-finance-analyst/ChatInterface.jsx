@@ -3,6 +3,7 @@ import { FaComments, FaPaperPlane, FaPlus, FaTrash } from "react-icons/fa";
 import { apiErrorMessage } from "../../api/client";
 import { chatApi } from "../../api/chat";
 import { useAuth } from "../authentication/AuthContext";
+import ChatAnswerEvidence from "./ChatAnswerEvidence";
 
 function cleanDisplayText(value) {
   return String(value ?? "")
@@ -188,9 +189,20 @@ export default function ChatInterface({ onProfileComplete }) {
   )?.metadata?.local_model_status;
   const modelStatusLabel = latestModelStatus === "available"
     ? "Private local language model active"
-    : latestModelStatus && !["not_used", "not_used_for_clarification", "not_used_for_deterministic_answer"].includes(latestModelStatus)
+    : latestModelStatus && !["not_used", "not_needed", "not_used_for_clarification", "not_used_for_deterministic_answer"].includes(latestModelStatus)
       ? "Local finance tools active | language model not connected"
-      : "Private finance workspace";
+      : focus === "finance_analyst" ? "Private finance workspace" : "Zengen AI chat";
+  const starterPrompts = focus === "finance_analyst" ? [
+    "What is the difference between cash received and revenue recorded?",
+    "Which confirmed customer invoices are overdue?",
+    "Show my partially paid invoices",
+    "What if all unpaid invoices are paid next month?",
+    "What records do I need to calculate break-even?",
+  ] : [
+    "Help me write a clear email",
+    "Explain a difficult idea simply",
+    "Help me plan my week",
+  ];
 
   return (
     <div className="flex h-full min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#12111a] text-white">
@@ -223,17 +235,14 @@ export default function ChatInterface({ onProfileComplete }) {
         {error && <p role="alert" className="mx-4 mt-3 rounded-lg border border-rose-300/20 bg-rose-300/[0.06] px-3 py-2 text-xs text-rose-200">{error}</p>}
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
           {!messages.length && !initialLoading && <div className="mx-auto mt-8 max-w-lg text-center">
-            <h2 className="text-xl font-semibold">Ask your Finance Analyst</h2>
-            <p className="text-sm leading-6 text-[#aaa5b8]">Ask about confirmed income and expenses, invoices, bills, spending trends, or profit planning.</p>
-            <div className="mt-5 grid gap-2 text-left">{["Summarize my confirmed income and expenses", "Which customer invoices are overdue?", "What supplier bills are due soon?", "How can I increase profit?"].map((question) => <button key={question} type="button" disabled={sending} onClick={() => sendMessage(null, { message: question })} className="rounded-xl border border-white/[0.08] px-4 py-3 text-xs text-[#d3cfdd] hover:border-violet-300/30 disabled:opacity-50">{question}</button>)}</div>
+            <h2 className="text-xl font-semibold">{focus === "finance_analyst" ? "Ask your Finance Analyst" : "Ask Zengen AI"}</h2>
+            <p className="text-sm leading-6 text-[#aaa5b8]">{focus === "finance_analyst" ? "Explore finance concepts, calculate with values you provide, or ask about confirmed invoices and bills. Workspace totals are not bank cash or final profit." : "Ask for help with writing, learning, planning, coding, or general questions."}</p>
+            <div className="mt-5 grid gap-2 text-left">{starterPrompts.map((question) => <button key={question} type="button" disabled={sending} onClick={() => sendMessage(null, { message: question })} className="rounded-xl border border-white/[0.08] px-4 py-3 text-xs text-[#d3cfdd] hover:border-violet-300/30 disabled:opacity-50">{question}</button>)}</div>
           </div>}
           {messages.map((message, index) => <div key={message.id || `${message.created_at}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}><div className="max-w-[85%]">
             <article className={`whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 ${message.role === "user" ? "bg-violet-300 text-[#171222]" : "border border-white/[0.07] bg-[#1a1923] text-[#e2deeb]"}`}>
               {cleanDisplayText(message.content)}{message.pending && <span className="mt-1 block text-[10px] opacity-60">Sending...</span>}
-              {message.role === "assistant" && message.metadata?.supporting_figures?.length > 0 && <div className="mt-3 border-t border-white/10 pt-2 text-[10px] text-[#aaa5b8]"><strong>Based on:</strong> {message.metadata.supporting_figures.map((item) => `${item.label}: ${item.value}`).join(" | ")}</div>}
-              {message.role === "assistant" && message.metadata?.supporting_documents?.length > 0 && <div className="mt-2 text-[10px] text-[#aaa5b8]"><strong>Documents:</strong> {message.metadata.supporting_documents.map((item) => item.original_name).join(" | ")}</div>}
-              {message.role === "assistant" && message.metadata?.sources?.filter((source) => source?.title && /^https:\/\//i.test(source.url || "")).length > 0 && <div className="mt-3 border-t border-white/10 pt-2"><p className="mb-1 mt-0 text-[10px] font-semibold text-[#aaa5b8]">Sources</p><div className="flex flex-wrap gap-2">{message.metadata.sources.filter((source) => source?.title && /^https:\/\//i.test(source.url || "")).map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-1 rounded-full border border-violet-300/15 bg-violet-300/[0.04] px-2.5 py-1.5 text-[10px] text-violet-200 hover:border-violet-300/40"><span className="truncate">{cleanDisplayText(source.title)}</span><span aria-hidden="true">↗</span></a>)}</div></div>}
-              {message.role === "assistant" && message.metadata?.assumptions?.map((item) => <p key={item} className="mb-0 mt-2 text-[10px] text-[#898496]">{item}</p>)}
+              {message.role === "assistant" && <ChatAnswerEvidence metadata={message.metadata} />}
             </article>
             {message.role === "assistant" && <div className="mt-2 space-y-2">
               {message.id === visibleSuggestionMessageId && message.metadata?.follow_up_questions?.map((question) => <div key={question.id} className="rounded-xl border border-white/[0.07] bg-[#171620] p-3"><p className="mb-2 mt-0 text-xs text-[#c5c0d0]">{question.question}</p><div className="flex flex-wrap gap-2">{question.suggested_answers?.map((answer) => <button key={answer} type="button" disabled={sending} onClick={() => sendMessage(null, { message: answer })} className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] text-[#c5c0d0] hover:border-violet-300/30 disabled:opacity-50">{answer}</button>)}{question.choices?.map((choice) => <button key={choice.document_id || choice.value} type="button" disabled={sending} onClick={() => sendMessage(null, choice.document_id ? { message: question.original_question, attachDocumentId: choice.document_id } : { message: choice.value })} className="rounded-full border border-violet-300/20 bg-violet-300/[0.06] px-3 py-1.5 text-[10px] text-violet-100 hover:border-violet-300/50 disabled:opacity-50">{choice.label}</button>)}</div></div>)}
@@ -243,8 +252,8 @@ export default function ChatInterface({ onProfileComplete }) {
           <div ref={messagesEndRef} />
         </div>
         <form onSubmit={sendMessage} className="border-t border-white/[0.07] p-4">
-          <div className="flex gap-2 rounded-xl border border-white/10 bg-[#1a1923] p-2"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask about your finance work…" className="min-w-0 flex-1 bg-transparent px-2 text-sm text-white outline-none placeholder:text-[#777285]" disabled={sending} /><button type="submit" disabled={!input.trim() || sending} className="flex items-center gap-2 rounded-lg bg-violet-300 px-4 py-2 text-xs font-semibold text-[#171222] disabled:opacity-40"><FaPaperPlane /> {sending ? "Thinking" : "Send"}</button></div>
-          <p className="mb-0 mt-2 text-[10px] text-[#777285]">Documents are searched automatically. No external AI API is used; when the local language model is offline, finance tools provide the answer.</p>
+          <div className="flex gap-2 rounded-xl border border-white/10 bg-[#1a1923] p-2"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={focus === "finance_analyst" ? "Ask about your finance work..." : "Ask anything..."} className="min-w-0 flex-1 bg-transparent px-2 text-sm text-white outline-none placeholder:text-[#777285]" disabled={sending} /><button type="submit" disabled={!input.trim() || sending} className="flex items-center gap-2 rounded-lg bg-violet-300 px-4 py-2 text-xs font-semibold text-[#171222] disabled:opacity-40"><FaPaperPlane /> {sending ? "Thinking" : "Send"}</button></div>
+          <p className="mb-0 mt-2 text-[10px] text-[#777285]">{focus === "finance_analyst" ? "Finance answers use confirmed workspace records when available. Readable documents may be searched; scanned PDFs need OCR." : "Check important facts and follow the source links when shown."}</p>
         </form>
       </section>
     </div>

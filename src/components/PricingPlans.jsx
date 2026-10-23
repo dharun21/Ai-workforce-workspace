@@ -108,6 +108,18 @@ const tamilPricing = {
   planDescriptionCard: ["தனிநபர்களுக்கும் AI உதவியை முதன்முறையாகப் பயன்படுத்துவோருக்கும் ஏற்றது.", "பல நிபுணர்கள் தேவைப்படும் வளர்ந்து வரும் வணிகங்களுக்கு ஏற்றது.", "விரிவான AI பணிக்குழுவை உருவாக்க விரும்பும் வணிகங்களுக்கு ஏற்றது."],
 };
 
+function applyTamilTypeface(value) {
+  if (typeof value === "string") {
+    return value.split(/([\u0b80-\u0bff]+)/u).map((part, index) => (
+      /^[\u0b80-\u0bff]+$/u.test(part)
+        ? <span className="tamil-script" key={`${part}-${index}`} lang="ta">{part}</span>
+        : part
+    ));
+  }
+  if (Array.isArray(value)) return value.map(applyTamilTypeface);
+  return value;
+}
+
 function money(usd, currency, language = "en") {
   const amount = currency === "INR" ? usd * USD_TO_INR : usd;
   const locale = { en: currency === "INR" ? "en-IN" : "en-US", ta: "ta-IN", hi: "hi-IN", es: "es-ES" }[language] || "en-US";
@@ -150,7 +162,7 @@ function Wordmark() {
 }
 
 function PlanCard({ plan, currency, language }) {
-  const translation = language === "ta" ? tamilPricing : pricingTranslations[language];
+  const translation = language === "ta" ? applyTamilTypeface(tamilPricing) : pricingTranslations[language];
   const planIndex = plans.findIndex(({ id }) => id === plan.id);
   return (
     <article className={`relative flex h-full flex-col rounded-2xl border p-5 transition duration-300 hover:-translate-y-1 ${plan.id === "nexus" ? "border-violet-200/30 bg-gradient-to-b from-[#211b31] to-[#14121a] shadow-[0_20px_65px_rgba(106,80,160,0.12)]" : "border-white/[0.08] bg-[#111018]/85 hover:border-violet-200/20"}`}>
@@ -177,7 +189,7 @@ function PlanCard({ plan, currency, language }) {
         {plan.features.map((feature, index) => (
           <li className="flex items-start gap-2.5 text-[9px] leading-relaxed text-[#c6c1d1]" key={feature}>
             {index === 1 ? <SpecialistIcon type="assistant" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-200" /> : <FaCheck className="mt-0.5 shrink-0 text-emerald-300" />}
-            <span>{planFeatureTranslations[language]?.[planIndex]?.[index] || feature}</span>
+            <span>{language === "ta" ? applyTamilTypeface(planFeatureTranslations.ta[planIndex][index]) : (planFeatureTranslations[language]?.[planIndex]?.[index] || feature)}</span>
           </li>
         ))}
       </ul>
@@ -193,7 +205,7 @@ export default function PricingPlans({ compact = false, language = "en" }) {
   const { user } = useAuth();
   const [currency, setCurrency] = useState("USD");
   const [singleBuyerType, setSingleBuyerType] = useState("small");
-  const translation = pricingTranslations[language];
+  const translation = language === "ta" ? applyTamilTypeface(tamilPricing) : pricingTranslations[language];
   const wrapper = compact ? "px-5 py-8 sm:px-8" : "mx-auto w-full max-w-[1320px] px-6 py-20 lg:px-10 lg:py-24";
 
   return (
@@ -251,7 +263,7 @@ export default function PricingPlans({ compact = false, language = "en" }) {
               <div className="flex pt-3 flex-wrap gap-2 text-[8px] text-[#ded7f0]">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-black/15 px-2.5 py-1.5"><FaCheck className="text-emerald-300" /> {translation?.specialist || "One selected specialist"}</span>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-black/15 px-2.5 py-1.5"><FaCheck className="text-emerald-300" /> {translation?.assistant || "Personal Assistant included"}</span>
-                {user && <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/15 bg-emerald-300/[0.06] px-2.5 py-1.5 text-emerald-200"><SpecialistIcon type="finance" className="h-3 w-3" /> {language === "ta" ? tamilPricing.purchased : "Finance Analyst purchased"}</span>}
+                {user && <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/15 bg-emerald-300/[0.06] px-2.5 py-1.5 text-emerald-200"><SpecialistIcon type="finance" className="h-3 w-3" /> {language === "ta" ? applyTamilTypeface(tamilPricing.purchased) : "Finance Analyst purchased"}</span>}
               </div>
               </div>
             </div>

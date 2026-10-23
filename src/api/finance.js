@@ -4,6 +4,7 @@ let documentsRequest = null;
 
 export const financeApi = {
   getWorkspace: async () => (await apiClient.get("/finance/workspace")).data,
+  getOverview: async () => (await apiClient.get("/intelligence/overview")).data,
   saveWorkspace: async (workspace) => (await apiClient.put("/finance/workspace", workspace)).data,
   listDocuments: () => {
     if (!documentsRequest) {
@@ -27,17 +28,41 @@ export const financeApi = {
   getRecord: async (id) => (await apiClient.get(`/finance/records/${id}`)).data,
   confirmRecord: async (id, corrections) =>
     (await apiClient.patch(`/finance/records/${id}/confirm`, corrections)).data,
-  updatePayment: async (id, payment_status) =>
-    (await apiClient.patch(`/finance/records/${id}/payment`, { payment_status })).data,
+  updatePayment: async (id, amountPaid) =>
+    (await apiClient.patch(`/finance/records/${id}/payment`, { amount_paid: amountPaid })).data,
   updateReminder: async (id, reminder_date) =>
     (await apiClient.patch(`/finance/records/${id}/reminder`, { reminder_date })).data,
   markRecordUnsupported: async (id) =>
     (await apiClient.patch(`/finance/records/${id}/mark-unsupported`)).data,
+  payrollOverview: async () => (await apiClient.get("/finance/payroll/overview")).data,
+  listEmployees: async () => (await apiClient.get("/finance/payroll/employees")).data,
+  saveEmployee: async (employee) => employee.id
+    ? (await apiClient.put(`/finance/payroll/employees/${employee.id}`, employee)).data
+    : (await apiClient.post("/finance/payroll/employees", employee)).data,
+  listLeave: async () => (await apiClient.get("/finance/payroll/leave")).data,
+  createLeave: async (entry) => (await apiClient.post("/finance/payroll/leave", entry)).data,
+  decideLeave: async (id, decision) => (await apiClient.post(`/finance/payroll/leave/${id}/${decision}`)).data,
+  listReimbursements: async () => (await apiClient.get("/finance/payroll/reimbursements")).data,
+  createReimbursement: async (entry) => (await apiClient.post("/finance/payroll/reimbursements", entry)).data,
+  decideReimbursement: async (id, decision) => (await apiClient.post(`/finance/payroll/reimbursements/${id}/${decision}`)).data,
+  markReimbursementPaid: async (id, paidAt, reference) => (await apiClient.post(`/finance/payroll/reimbursements/${id}/mark-paid`, { paid_at: paidAt, payment_reference: reference || null })).data,
+  listPayslips: async () => (await apiClient.get("/finance/payroll/payslips")).data,
+  createPayslip: async (entry) => (await apiClient.post("/finance/payroll/payslips", entry)).data,
+  deleteDraftPayslip: async (id) => apiClient.delete(`/finance/payroll/payslips/${id}`),
+  finalizePayslip: async (id) => (await apiClient.post(`/finance/payroll/payslips/${id}/finalize`, { reviewed_pay_leave_and_taxes: true })).data,
+  markPayslipPaid: async (id, paidAt, reference) => (await apiClient.post(`/finance/payroll/payslips/${id}/mark-paid`, { paid_at: paidAt, payment_reference: reference || null })).data,
+  downloadPayslip: async (id) => (await apiClient.get(`/finance/payroll/payslips/${id}/pdf`, { responseType: "blob" })).data,
+  listGovernmentTaxes: async () => (await apiClient.get("/finance/payroll/taxes")).data,
+  createGovernmentTax: async (entry) => (await apiClient.post("/finance/payroll/taxes", entry)).data,
+  confirmGovernmentTax: async (id) => (await apiClient.post(`/finance/payroll/taxes/${id}/confirm`, { reviewed_local_tax_basis: true })).data,
+  markGovernmentTaxPaid: async (id, paidAt, reference) => (await apiClient.post(`/finance/payroll/taxes/${id}/mark-paid`, { paid_at: paidAt, payment_reference: reference || null })).data,
+  deleteDraftGovernmentTax: async (id) => apiClient.delete(`/finance/payroll/taxes/${id}`),
 };
 
 export function toFinanceWorkspace(profile) {
   return {
     business_name: profile.businessName,
+    business_type: profile.businessType || null,
     industry: profile.industry || null,
     country: profile.country || null,
     currency: profile.currency,
@@ -56,6 +81,7 @@ export function toFinanceWorkspace(profile) {
 export function fromFinanceWorkspace(workspace) {
   return {
     businessName: workspace.business_name,
+    businessType: workspace.business_type || "",
     industry: workspace.industry || "",
     country: workspace.country || "",
     currency: workspace.currency,
