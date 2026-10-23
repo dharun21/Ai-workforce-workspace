@@ -46,7 +46,7 @@ function readStored(key, fallback) {
   }
 }
 
-export default function FinanceCompanionTools() {
+export default function FinanceCompanionTools({ onOpenChat }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("Chat");
   const [chats, setChats] = useState([]);
@@ -209,7 +209,7 @@ export default function FinanceCompanionTools() {
   };
   return (
     <>
-      <button type="button" onClick={() => setOpen(!open)} className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full border border-violet-200/30 bg-[#211b30] px-5 py-3 text-xs font-semibold text-white shadow-[0_12px_40px_rgba(0,0,0,0.4)] transition hover:bg-[#2b2340] max-[600px]:bottom-4 max-[600px]:right-4" aria-expanded={open}>
+      <button type="button" onClick={() => { if (!open && onOpenChat) onOpenChat(); else setOpen(!open); }} className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full border border-violet-200/30 bg-[#211b30] px-5 py-3 text-xs font-semibold text-white shadow-[0_12px_40px_rgba(0,0,0,0.4)] transition hover:bg-[#2b2340] max-[600px]:bottom-4 max-[600px]:right-4" aria-expanded={open}>
         {open ? <FaTimes /> : <FaComments className="text-violet-200" />}{open ? "Close finance tools" : "Ask Finance AI"}
       </button>
       {open && <section className="fixed bottom-24 right-6 z-40 flex h-[min(690px,calc(100vh-9rem))] w-[min(900px,calc(100vw-3rem))] overflow-hidden rounded-2xl border border-white/10 bg-[#12111a] shadow-[0_28px_90px_rgba(0,0,0,0.6)] max-[600px]:bottom-[4.5rem] max-[600px]:right-3 max-[600px]:h-[min(760px,calc(100vh-6rem))] max-[600px]:w-[calc(100vw-1.5rem)]" aria-label="Finance AI workspace tools">

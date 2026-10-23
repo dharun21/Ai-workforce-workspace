@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaCog,
+  FaComments,
   FaDollarSign,
   FaSignOutAlt,
   FaUserCircle,
@@ -56,10 +57,16 @@ export function AppSidebar() {
             </NavLink>
           )}
           {user?.specialists?.includes("finance_analyst") && (
-            <NavLink className={linkClass} to="/ai/finance">
-              <SpecialistIcon type="finance" className="h-4 w-4 shrink-0" />
-              <span className="max-[760px]:hidden">Finance analyst</span>
-            </NavLink>
+            <>
+              <NavLink end className={linkClass} to="/ai/finance">
+                <SpecialistIcon type="finance" className="h-4 w-4 shrink-0" />
+                <span className="max-[760px]:hidden">Finance analyst</span>
+              </NavLink>
+              <NavLink className={linkClass} to="/ai/finance/chat">
+                <FaComments className="shrink-0 text-sm" />
+                <span className="max-[760px]:hidden">AI chat</span>
+              </NavLink>
+            </>
           )}
           {user?.specialists?.includes("hr_executive") && (
             <NavLink className={linkClass} to="/ai/hr">
@@ -74,7 +81,7 @@ export function AppSidebar() {
             </NavLink>
           )}
         </nav>
-        <p className="mb-3 mt-9 px-3 text-[9px] font-bold tracking-[0.18em] text-[#706b80] max-[760px]:hidden">
+        <p className="mb-3 mt-6 px-3 text-[9px] font-bold tracking-[0.18em] text-[#706b80] max-[760px]:hidden">
           PREFERENCES
         </p>
         {user?.is_admin && (

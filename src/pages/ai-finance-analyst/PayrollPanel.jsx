@@ -98,7 +98,7 @@ export default function PayrollPanel({ currency = "USD", businessType = "Retail"
     finally { setBusy(false); }
   }
 
-  return <section className="space-y-5" aria-label="Employee payroll">
+  return <section className="space-y-6" aria-label="Employee payroll">
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-violet-200">People costs · {businessType}</p><h2 className="m-0 font-display text-2xl font-semibold text-white">Payroll & payslips</h2><p className="mb-0 mt-2 max-w-2xl text-xs leading-5 text-[#9995a8]">Manage employee pay, leave, and reimbursements. A payslip is an employee pay document, not a customer invoice. Payments and tax filings happen outside Zengen.</p></div>
       <button type="button" className={button} onClick={() => { setLoading(true); load().catch((e) => setError(apiErrorMessage(e))).finally(() => setLoading(false)); }}>Refresh</button>
@@ -106,11 +106,11 @@ export default function PayrollPanel({ currency = "USD", businessType = "Retail"
     {error && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-200">{error}</p>}
     {notice && <p role="status" className="rounded-xl border border-emerald-300/20 bg-emerald-300/5 p-3 text-xs text-emerald-200">{notice}</p>}
     {loading ? <p className="text-sm text-[#9995a8]">Loading payroll…</p> : <>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[["Active employees", summary?.employee_count], ["Draft payslips", summary?.draft_payslips], ["Finalized, unpaid", summary?.finalized_unpaid_payslips], ["To employee", amount(summary?.next_payroll_amount, summary?.currency || currency)]].map(([label, value]) => <div key={label} className={card}><p className="m-0 text-[11px] text-[#9995a8]">{label}</p><strong className="mt-3 block text-xl text-white">{value ?? 0}</strong></div>)}
       </div>
       <p className="m-0 text-[10px] leading-5 text-[#777285]">{summary?.basis_note} {summary?.confirmed_unpaid_taxes ? `${summary.confirmed_unpaid_taxes} confirmed government tax record(s) remain marked unpaid.` : ""}</p>
-      <nav className="flex gap-2 overflow-x-auto border-b border-white/10 pb-2" aria-label="Payroll sections">{["Payslips", "Employees", "Leave", "Reimbursements", "Taxes"].map((name) => <button key={name} type="button" onClick={() => setTab(name)} className={`shrink-0 rounded-lg px-3 py-2 text-xs ${tab === name ? "bg-violet-300/15 text-violet-200" : "text-[#9995a8] hover:bg-white/5"}`}>{name}</button>)}</nav>
+      <nav className="flex gap-3 overflow-x-auto border-b border-white/10 pb-3" aria-label="Payroll sections">{["Payslips", "Employees", "Leave", "Reimbursements", "Taxes"].map((name) => <button key={name} type="button" onClick={() => setTab(name)} className={`shrink-0 rounded-lg px-3 py-2 text-xs ${tab === name ? "bg-violet-300/15 text-violet-200" : "text-[#9995a8] hover:bg-white/5"}`}>{name}</button>)}</nav>
 
       {tab === "Employees" && <div className="space-y-4">
         <div className="flex items-center justify-between"><h3 className="m-0 text-sm font-semibold text-white">Employee directory</h3><button className={action} onClick={() => setEmployeeDraft(employeeBlank(currency))}>Add employee</button></div>
@@ -145,7 +145,7 @@ export default function PayrollPanel({ currency = "USD", businessType = "Retail"
         {!claims.length && <p className="text-xs text-[#9995a8]">No reimbursement claims yet.</p>}
       </div>}
 
-      {tab === "Taxes" && <div className="space-y-4">
+      {tab === "Taxes" && <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="m-0 text-sm text-white">Government tax records</h3><p className="mb-0 mt-1 text-[11px] text-[#9995a8]">Record only taxes that apply to your business. Zengen does not calculate rates, file returns, or send payments.</p></div><button className={action} onClick={() => setTaxDraft({ tax_type: "", jurisdiction: country, authority_name: "", period_start: monthStart(), period_end: today(), due_date: "", amount: "", currency, note: "" })}>Add tax record</button></div>
         {taxDraft && <form className={`${card} grid gap-3 md:grid-cols-3`} onSubmit={async (event) => { event.preventDefault(); if (await save(() => financeApi.createGovernmentTax({ ...taxDraft, due_date: taxDraft.due_date || null, authority_name: taxDraft.authority_name || null, note: taxDraft.note || null }), "Tax draft saved for review.")) setTaxDraft(null); }}>
           <h4 className="m-0 text-sm text-white md:col-span-3">New tax draft</h4>
@@ -166,7 +166,7 @@ export default function PayrollPanel({ currency = "USD", businessType = "Retail"
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">{tax.status === "draft" ? <><label className="flex items-center gap-2 text-[11px] text-[#c5c0d0]"><input type="checkbox" checked={Boolean(taxReviewed[tax.id])} onChange={(e) => setTaxReviewed((current) => ({ ...current, [tax.id]: e.target.checked }))} />I checked the applicable rules and amount</label><button disabled={busy || !taxReviewed[tax.id]} className={action} onClick={() => void save(() => financeApi.confirmGovernmentTax(tax.id), "Tax record confirmed.")}>Confirm</button><button disabled={busy} className={button} onClick={() => void save(() => financeApi.deleteDraftGovernmentTax(tax.id), "Tax draft removed.")}>Delete draft</button></> : tax.status === "confirmed" ? <button className={button} onClick={() => setTaxPaymentDraft({ id: tax.id, paid_at: today(), payment_reference: "" })}>Record external payment</button> : null}</div>
           {taxPaymentDraft?.id === tax.id && <div className="mt-3 flex flex-wrap items-end gap-2"><FormField label="Paid date"><input type="date" max={today()} className={field} value={taxPaymentDraft.paid_at} onChange={(e) => setTaxPaymentDraft({ ...taxPaymentDraft, paid_at: e.target.value })} /></FormField><FormField label="Payment / filing reference"><input className={field} value={taxPaymentDraft.payment_reference} onChange={(e) => setTaxPaymentDraft({ ...taxPaymentDraft, payment_reference: e.target.value })} /></FormField><button disabled={busy} className={action} onClick={async () => { if (await save(() => financeApi.markGovernmentTaxPaid(tax.id, taxPaymentDraft.paid_at, taxPaymentDraft.payment_reference), "External tax payment recorded.")) setTaxPaymentDraft(null); }}>Mark paid</button><button className={button} onClick={() => setTaxPaymentDraft(null)}>Cancel</button></div>}
         </article>)}
-        {!taxes.length && <p className="text-xs text-[#9995a8]">No tax records entered. Create one only when a tax is applicable and you have reviewed its basis.</p>}
+        {!taxes.length && <p className="m-0 rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-xs leading-5 text-[#9995a8]">No tax records entered. Create one only when a tax is applicable and you have reviewed its basis.</p>}
       </div>}
 
       {tab === "Payslips" && <div className="space-y-4"><div className="flex items-center justify-between"><h3 className="m-0 text-sm text-white">Employee payslips</h3><button className={action} disabled={!activeEmployees.length} onClick={() => { setSlipDraft({ ...slipBlank(), employee_id: activeEmployees[0].id }); }}>Prepare payslip</button></div>

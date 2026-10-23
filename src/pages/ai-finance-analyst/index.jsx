@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "../../components/AppLayout";
 
 import OnboardingWizard from "./OnboardingWizard";
@@ -20,7 +21,6 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaClock,
-  FaComments,
   FaDownload,
   FaFileAlt,
   FaFileInvoice,
@@ -61,11 +61,6 @@ const SECTIONS = [
   { id: "Finance rules", icon: FaCheck },
   { id: "About us", icon: FaInfoCircle },
 ];
-const VIEWS = [
-  { id: "overview", label: "Finance Overview", icon: FaChartLine },
-  { id: "chat", label: "AI Chat", icon: FaComments },
-];
-
 function Metric({ label, value, note, icon: Icon, style }) {
   return (
     <article style={style} className="h-full min-w-0 rounded-2xl border border-white/[0.07] bg-[#171620] p-5">
@@ -263,7 +258,7 @@ function Onboarding({ onComplete, busy, notice }) {
             <p className="mb-6 mt-2 text-xs text-[#9995a8]">Weâ€™ll use this to tailor categories, reporting, and financial periods.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Business name"><input autoFocus value={profile.businessName} onChange={(e) => update("businessName", e.target.value)} placeholder="e.g. Northstar Studio" /></Field>
-              <Field label="Finance overview type"><select value={profile.businessType} onChange={(e) => update("businessType", e.target.value)}><option value="">Choose later</option><option value="Retail">Retail</option><option value="Corporate">Corporate</option></select></Field>
+              <Field label="Business type"><select value={profile.businessType} onChange={(e) => update("businessType", e.target.value)}><option value="">Choose later</option><option value="Retail">Retail</option><option value="Corporate">Corporate</option></select></Field>
               <p className="mb-3 mt-0 text-[10px] text-[#9995a8]">Retail highlights collections and stock data gaps. Corporate highlights payables, budgets and entity reporting.</p>
               <Field label="Industry"><input value={profile.industry} onChange={(e) => update("industry", e.target.value)} placeholder="e.g. Retail, software, consulting" /></Field>
               <Field label="Country"><input value={profile.country} onChange={(e) => update("country", e.target.value)} placeholder="Country or region" /></Field>
@@ -442,8 +437,10 @@ function RecordReviewCard({ record, documentName, onConfirm, onMarkUnsupported, 
 }
 
 export default function FinanceIndex() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const initialLoadStarted = useRef(false);
-  const [view, setView] = useState("overview");
+  const [view, setView] = useState(location.pathname === "/ai/finance/chat" ? "chat" : "overview");
   const [profile, setProfile] = useState(null);
   const [overview, setOverview] = useState(null);
   const [payrollSummary, setPayrollSummary] = useState(null);
@@ -456,6 +453,9 @@ export default function FinanceIndex() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState("");
+  useEffect(() => {
+    setView(location.pathname === "/ai/finance/chat" ? "chat" : "overview");
+  }, [location.pathname]);
   const refreshWorkspace = useCallback(async () => {
     setLoadingWorkspace(true);
     setLoadError("");
@@ -542,19 +542,6 @@ export default function FinanceIndex() {
     } finally {
       setBusy(false);
     }
-  }
-
-  async function changeBusinessType(businessType) {
-    if (!profile || businessType === profile.businessType) return;
-    setBusy(true);
-    try {
-      const workspace = await financeApi.saveWorkspace(toFinanceWorkspace({ ...profile, businessType }));
-      setProfile(fromFinanceWorkspace(workspace));
-      await refreshOverview();
-      setNotice(`Finance overview set to ${businessType}. Confirmed record totals were not changed.`);
-    } catch (error) {
-      setNotice(apiErrorMessage(error, "Could not update your overview type."));
-    } finally { setBusy(false); }
   }
 
   async function deleteDocument(id) {
@@ -698,14 +685,14 @@ export default function FinanceIndex() {
     </label>
   );
 
-  const openChat = () => { void refreshWorkspace(); setView("chat"); };
-  const activeView = view === "onboarding" ? "chat" : view;
+  const openChat = (focus = "finance_analyst") => {
+    void refreshWorkspace();
+    navigate("/ai/finance/chat", { state: { initialFocus: focus } });
+    setView("chat");
+  };
 
   return (
-    <AppLayout section="My AI team" current="Finance Analyst" contentClassName={view === "chat" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : undefined}>
-      <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-white/[0.08] px-7 pt-6 max-[760px]:px-4" aria-label="Finance Analyst views">
-        {VIEWS.map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => setView(id)} aria-current={activeView === id ? "page" : undefined} className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[11px] transition ${activeView === id ? "border-violet-300 text-violet-200" : "border-transparent text-[#9995a8] hover:text-white"}`}><Icon className="text-[10px]" />{label}</button>)}
-      </nav>
+    <AppLayout section="My AI team" current={view === "chat" ? "AI Chat" : "Finance Analyst"} contentClassName={view === "chat" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : undefined}>
       {view === "onboarding" && (
         <div className="mx-auto max-w-[1450px] px-7 py-7 max-[760px]:px-4">
           <OnboardingWizard onStartChatting={openChat} />
@@ -713,7 +700,7 @@ export default function FinanceIndex() {
       )}
       {view === "chat" && (
         <div className="mx-auto flex min-h-0 w-full max-w-[1450px] flex-1 flex-col px-7 py-4 max-[760px]:px-4">
-          <ChatInterface onProfileComplete={() => setView("onboarding")} />
+          <ChatInterface initialFocus={location.state?.initialFocus || "general"} onProfileComplete={() => setView("onboarding")} />
         </div>
       )}
       {view === "overview" && (
@@ -725,7 +712,7 @@ export default function FinanceIndex() {
             <h1 className="m-0 font-display text-3xl font-bold tracking-tight text-white">{profile.businessName}</h1>
             <p className="mb-0 mt-2 text-xs text-[#9995a8]">Your Finance Analyst AI | {profile.currency} | {profile.businessType || profile.industry || "Business finance"}</p>
           </div>
-          <div className="flex flex-wrap items-end gap-3"><label className="text-[10px] text-[#9995a8]">Overview type<select aria-label="Finance overview type" value={profile.businessType || ""} disabled={busy} onChange={(event) => void changeBusinessType(event.target.value)} className="mt-1 block h-11 rounded-lg border border-white/10 bg-[#171620] px-3 text-xs text-white"><option value="" disabled>Choose a type</option><option value="Retail">Retail</option><option value="Corporate">Corporate</option></select></label>{importButton}</div>
+          <div>{importButton}</div>
         </header>
         {notice && <p role="status" className="mb-4 rounded-lg border border-violet-300/20 bg-violet-300/[0.06] px-4 py-3 text-xs text-violet-100">{notice}</p>}
         <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-white/[0.08]" aria-label="Finance workspace">
@@ -781,13 +768,13 @@ export default function FinanceIndex() {
             <article className="rounded-xl border border-white/[0.07] bg-[#111018] p-4"><h3 className="m-0 text-xs font-semibold text-white">Current limits</h3><ul className="mb-0 mt-3 space-y-2 pl-4 text-[10px] leading-4 text-[#9995a8]"><li>Invoice and bill totals do not establish recognized revenue, final profit, or available cash.</li><li>Cumulative partial payments can be recorded, but disputes and bank reconciliation are not tracked yet.</li><li>Scanned image-only PDFs need OCR before their text can be read.</li><li>It does not initiate or authorize payments. Reminder dates are saved preferences; notifications are not sent yet.</li></ul></article>
           </div>
         </section>}
-        {section !== "Overview" && section !== "Documents" && section !== "Plugins" && section !== "Statements" && section !== "Receivables" && section !== "Bills" && section !== "Insights" && section !== "About us" && <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-6">
+        {section !== "Overview" && section !== "Documents" && section !== "Plugins" && section !== "Statements" && section !== "Receivables" && section !== "Bills" && section !== "Insights" && section !== "About us" && section !== "Payroll" && <section className="rounded-2xl border border-white/[0.07] bg-[#171620] p-6">
           <p className="mb-2 text-[9px] font-bold tracking-[0.16em] text-violet-300">FINANCE WORKSPACE</p>
           <h2 className="m-0 font-display text-xl font-semibold">{section}</h2>
           <p className="mb-5 mt-2 max-w-2xl text-xs leading-5 text-[#9995a8]">{sectionCopy(section)}</p>
           {section === "Finance rules" ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <Rule label="Business name" value={profile.businessName} />
-            <Rule label="Overview type" value={profile.businessType || "Not selected"} />
+            <Rule label="Business type" value={profile.businessType || "Not selected"} />
             <Rule label="Industry" value={profile.industry || "Not set"} />
             <Rule label="Country" value={profile.country || "Not set"} />
             <Rule label="Operating currency" value={profile.currency} />
@@ -804,7 +791,7 @@ export default function FinanceIndex() {
         </section>}
         <p className="mb-0 mt-5 flex items-center gap-2 text-[10px] text-[#777285]"><FaCheck className="text-emerald-300" /> Finance workspace and files are loaded from your signed-in account.</p>
       </div>
-      <FinanceCompanionTools />
+      <FinanceCompanionTools onOpenChat={() => openChat("finance_analyst")} />
         </>
       )}
     </AppLayout>

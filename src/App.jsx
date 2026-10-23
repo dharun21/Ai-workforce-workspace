@@ -39,6 +39,7 @@ function App() {
             </Route>
             <Route element={<SpecialistRoute specialist="finance_analyst" />}>
               <Route path="/ai/finance" element={<FinanceIndex />} />
+              <Route path="/ai/finance/chat" element={<FinanceIndex />} />
               <Route path="/ai/finance/invoices/:id" element={<InvoiceDetailPage />} />
               <Route path="/finance" element={<LegacyFinancePage />} />
               <Route path="/finance/:id" element={<LegacyInvoiceDetail />} />

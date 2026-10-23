@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaComments, FaPaperPlane, FaPlus, FaTrash } from "react-icons/fa";
 import { apiErrorMessage } from "../../api/client";
 import { chatApi } from "../../api/chat";
@@ -24,12 +24,12 @@ const FOCUS_LABELS = {
 
 const FOCUS_SPECIALISTS = ["finance_analyst", "personal_assistant", "hr_executive", "sales_analyst"];
 
-export default function ChatInterface({ onProfileComplete }) {
+export default function ChatInterface({ onProfileComplete, initialFocus = "general" }) {
   const { user } = useAuth();
-  const availableFocuses = ["general", ...(user?.specialists || []).filter((key) => FOCUS_SPECIALISTS.includes(key))];
+  const availableFocuses = useMemo(() => ["general", ...(user?.specialists || []).filter((key) => FOCUS_SPECIALISTS.includes(key))], [user?.specialists]);
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
-  const [focus, setFocus] = useState("general");
+  const [focus, setFocus] = useState(initialFocus);
   const [messages, setMessages] = useState([]);
   const [visibleSuggestionMessageId, setVisibleSuggestionMessageId] = useState(null);
   const [input, setInput] = useState("");
@@ -38,6 +38,16 @@ export default function ChatInterface({ onProfileComplete }) {
   const [error, setError] = useState("");
   const messagesEndRef = useRef(null);
   const skipLoadRef = useRef(null);
+
+  useEffect(() => {
+    if (!availableFocuses.includes(initialFocus)) return;
+    setFocus(initialFocus);
+    setActiveConversationId(null);
+    setMessages([]);
+    setVisibleSuggestionMessageId(null);
+    setInput("");
+    setError("");
+  }, [initialFocus, availableFocuses]);
 
   useEffect(() => {
     let cancelled = false;
